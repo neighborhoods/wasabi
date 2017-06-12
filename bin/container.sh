@@ -55,14 +55,14 @@ fromPom() {
     mvn ${WASABI_MAVEN} -f $1/pom.xml -P $2 help:evaluate -Dexpression=$3 | sed -n -e '/^\[.*\]/ !{ p; }'
 }
 
-beerMe() {
+workingIndicator() {
   sleepTime=${1:-sleep_default}
   cntr=0
 
-  echo -ne "${green}chill'ax ${reset}"
+  echo -ne "${green}Please wait ${reset}"
 
   while (( cntr < ${sleepTime} )); do
-    echo -ne "${green}\xF0\x9F\x8D\xBA ${reset}"
+    echo -ne "${green}. ${reset}"
     sleep 3
     cntr=$(($cntr + 3))
   done
@@ -77,7 +77,7 @@ start_docker() {
   while :; do
     docker ps >/dev/null 2>&1
     [[ $? = 0 ]] && break
-    beerMe 3
+    workingIndicator 3
   done
 }
 
@@ -97,7 +97,7 @@ start_container() {
     eval "docker run --net=${docker_network} --name ${1} ${3} -d ${2} ${4}" || \
       usage "docker run --net=${docker_network} --name ${1} ${3} -d ${2} ${4}" 1
     # todo: ?better way? ... see about moving polling to the app-start
-    beerMe 30
+    workingIndicator 30
   elif [ "${cid}" != "running" ]; then
     cids=$(docker inspect --format '{{.State.Status}}' ${cid})
 
@@ -111,13 +111,13 @@ start_container() {
       docker ${op} ${cid} || usage "unable to run command: % docker ${op} ${cid}" 1
 
       while [ "${cids}" != "running" ]; do
-        beerMe 1
+        workingIndicator 1
         cids=$(docker inspect --format '{{.State.Status}}' ${cid})
       done
 
       if [ "${op}" == "restart" ]; then
         # todo: ?better way?
-        beerMe 15
+        workingIndicator 15
       fi
     fi
   fi
@@ -182,7 +182,7 @@ start_wasabi() {
     -e "${wenv}" -d ${project}-main || \
     usage "docker run --net=${docker_network} --name ${project}-main -p 8080:8080 -p 8090:8090 -p 8180:8180 -e \"${wenv}\" -d ${project}-main" 1
 
-  echo -ne "${green}chill'ax ${reset}"
+  echo -ne "${green}Working... ${reset}"
 
   status
 }

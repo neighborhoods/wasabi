@@ -72,14 +72,14 @@ fromPom() {
     mvn ${WASABI_MAVEN} -f $1/pom.xml -P $2 help:evaluate -Dexpression=$3 | sed -n -e '/^\[.*\]/ !{ p; }'
 }
 
-beerMe() {
+workingIndicator() {
   sleepTime=${1:-sleep_default}
   cntr=0
 
-  echo -ne "${green}chill'ax ${reset}"
+  echo -ne "${green}Please wait ${reset}"
 
   while (( cntr < ${sleepTime} )); do
-    echo -ne "\xF0\x9F\x8D\xBA "
+    echo -ne ". "
     sleep 3
     cntr=$(($cntr + 3))
   done
@@ -232,7 +232,7 @@ resource() {
         # FIXME: this can fail after 'package' given the profile = build
         sed -i '' "s/this.model.validatorUrl.*$/this.model.validatorUrl = null;/g" ${content}/swagger/swagger-ui.js
         ./bin/wasabi.sh start
-        beerMe 6
+        workingIndicator 6
         open http://localhost:8080/swagger/index.html;;
       doc) [ ! -f ./target/site/apidocs/index.html ] && build
         open ./target/site/apidocs/index.html;;
