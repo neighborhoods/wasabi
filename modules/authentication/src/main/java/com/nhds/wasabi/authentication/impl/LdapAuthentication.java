@@ -25,7 +25,9 @@ import com.intuit.wasabi.authenticationobjects.LoginToken;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.exceptions.AuthenticationException;
 import com.nhds.wasabi.authentication.impl.LdapUserCredential;
+import com.nhds.wasabi.userdirectory.impl.LdapUser;
 import com.nhds.wasabi.userdirectory.impl.LdapUserDirectory;
+
 import org.slf4j.Logger;
 
 import static com.google.common.base.Optional.fromNullable;
@@ -46,8 +48,9 @@ public class LdapAuthentication implements Authentication {
     private static final Logger LOGGER = getLogger(LdapAuthentication.class);
     private LdapUserDirectory userDirectory;
 
-    public LdapAuthentication() {
-        this.userDirectory = new LdapUserDirectory();
+    @Inject
+    public LdapAuthentication(LdapUserDirectory ldapUserDirectory) {
+        this.userDirectory = ldapUserDirectory;
     }
 
     /**
@@ -61,37 +64,12 @@ public class LdapAuthentication implements Authentication {
         LOGGER.debug("Authentication header received as: {}", authHeader);
 
         LdapUserCredential credential = parseUsernamePassword(fromNullable(authHeader));
-
-        if (isLdapAuthenicationValid(credential)) {
-            return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
+        LdapUser user = userDirectory.authenticate(credential.username,credential.password);
+        if (user!=null) {
+            LdapUserCredential encodedCredentials = new LdapUserCredential(credential.username,user.getPassword());
+            return withAccessToken(encodedCredentials.toBase64Encode()).withTokenType(BASIC).build();
         } else {
             throw new AuthenticationException("Authentication login failed. Invalid Login Credential");
-        }
-    }
-
-    /**
-     * @param credential the user's credential
-     * @return true if user token is valid, false otherwise
-     */
-    private boolean isLdapAuthenicationValid(final LdapUserCredential credential) {
-        try {
-            //check the cache first
-            UserInfo userInfo = userDirectory.lookupUser(UserInfo.Username.valueOf(credential.username));
-            if(userInfo!=null)
-            {
-                return userInfo.getPassword().equals(credential.password);
-            }
-            //go to LDAP and retrieve the user object (if auth is valid)
-            LdapRequestDelegate ldap = LdapRequestDelegate.getInstance();
-            userInfo = ldap.authenticate(credential.username,credential.password);
-            if(userInfo!=null) {
-                userDirectory.addUserToCache(userInfo);
-                return true;
-            }
-        		return false;
-        } catch (AuthenticationException ae) {
-            LOGGER.error("Unable to lookup user", ae);
-            return false;
         }
     }
 
@@ -107,7 +85,7 @@ public class LdapAuthentication implements Authentication {
 
         LdapUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
 
-        if (isLdapAuthenicationValid(credential)) {
+        if (userDirectory.isLdapTokenValid(credential.username,credential.password)) {
             return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
         } else {
             throw new AuthenticationException("Authentication Token is not valid");

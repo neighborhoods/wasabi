@@ -13,38 +13,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- *
- */
+
 package com.nhds.wasabi.userdirectory.impl;
 
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
-import com.intuit.wasabi.exceptions.AuthenticationException;
 import com.intuit.wasabi.userdirectory.UserDirectory;
-
-import java.util.ArrayList;
-
-import static java.text.MessageFormat.format;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 /**
  * Noop implementation for the UserDirectory, by default we will return super admin user
  */
 public class LdapUserDirectory implements UserDirectory {
-
-
-    private ArrayList<UserInfo> users;
-
+    private HashMap<String,LdapUser> users;
+    private LdapDelegateInterface ldap;
     /**
      * @param users a list of user credentials
      */
     public LdapUserDirectory() {
-        this.users = new ArrayList<UserInfo>();
+        this.users = new HashMap<String,LdapUser>();
+        this.ldap = LdapRequestDelegate.getInstance();
+        refreshCache();
     }
-    public void addUserToCache(UserInfo user) {
-        this.users.add(user);
+    public void addUserToCache(LdapUser user) {
+        this.users.put(user.getUsername().getUsername(),user);
     }
     /**
      * @param userEmail a user email address to check if it exists
@@ -53,24 +47,61 @@ public class LdapUserDirectory implements UserDirectory {
      */
     @Override
     public UserInfo lookupUserByEmail(final String userEmail) {
-        // Check cached users first
-        for (UserInfo user : users) {
-            if (user.getEmail().equals(userEmail)) {
-                return user;
+        Iterator<Entry<String,LdapUser>> iterator = this.users.entrySet().iterator();
+        while (iterator.hasNext() ) {
+            Entry<String,LdapUser> item = iterator.next();
+            if(userEmail.equals(item.getValue().getEmail())) {
+                return item.getValue().getUserInfo();
             }
+        }
+        LdapUser result = this.ldap.getUserInfoByEmail(userEmail);
+        if(result != null) {
+            addUserToCache(result);
         }
         return null;
     }
-
+    public void removeUserFromCache(String username) {
+        this.users.remove(username);
+    }
     @Override
     public UserInfo lookupUser(final Username username) {
-        final String usernameString = username.getUsername();
-
-        for (UserInfo user : users) {
-            if (user.getUsername().equals(username)) {
-                return user;
-            }
+        LdapUser result = this.users.get(username.getUsername());
+        if(result!=null) {
+            return result.getUserInfo();
+        }
+        result = this.ldap.getUserInfoByUsername(username.getUsername());
+        if(result != null) {
+            addUserToCache(result);
+            return result.getUserInfo();
         }
         return null;
+    }
+    
+    public LdapUser lookupLdapUser(final Username username) {
+        LdapUser result = this.users.get(username.getUsername());
+        if(result!=null) {
+            return result;
+        }
+        result = this.ldap.getUserInfoByUsername(username.getUsername());
+        if(result != null) {
+            addUserToCache(result);
+            return result;
+        }
+        return null;
+    }
+    public HashMap<String, LdapUser> getUsers() {
+        return this.users;
+    }
+    public void setUserCache(HashMap<String, LdapUser> userCache) {
+        this.users = userCache;
+    }
+    public void refreshCache() {
+        ldap.getUserCache(this);
+    }
+    public boolean isLdapTokenValid(String username, String encryptedPassword) {
+        return ldap.isLdapTokenValid(this, username, encryptedPassword);
+    }
+    public LdapUser authenticate(String username, String password) {
+        return ldap.authenticate(this,username,password);
     }
 }
