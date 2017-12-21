@@ -19,7 +19,7 @@ import io.swagger.annotations.ApiModelProperty;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
 
-import java.util.Calendar;
+import java.util.Date;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 
@@ -34,12 +34,15 @@ public class LdapUser {
     protected LdapUser(UserInfo userInfo) {
         super();
         this.userInfo = userInfo;
-        this.cacheTimestamp = Calendar.getInstance().getTimeInMillis();
+        Date now = new Date();
+        this.cacheTimestamp = now.getTime();
     }
     public LdapUser(UserInfo userInfo, String role) {
         super();
         this.userInfo = userInfo;
         this.role = role;
+        Date now = new Date();
+        this.cacheTimestamp = now.getTime();
     }
     public Username getUsername() {
         return this.userInfo.getUsername();
