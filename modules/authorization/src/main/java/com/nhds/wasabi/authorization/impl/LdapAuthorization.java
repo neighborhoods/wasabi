@@ -1,5 +1,5 @@
-/*******************************************************************************
- * Copyright 2016 Intuit
+/**
+ * Copyright 2018 Neighborhoods.com
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -9,7 +9,7 @@
  * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
- *******************************************************************************/
+ */
 package com.nhds.wasabi.authorization.impl;
 
 import com.google.common.base.Optional;
@@ -35,7 +35,6 @@ import com.intuit.wasabi.repository.cassandra.accessor.ApplicationListAccessor;
 import com.intuit.wasabi.repository.cassandra.pojo.AppRole;
 import com.intuit.wasabi.repository.cassandra.pojo.ApplicationList;
 import com.datastax.driver.mapping.Result;
-import com.nhds.wasabi.userdirectory.impl.LdapRequestDelegate;
 import com.nhds.wasabi.userdirectory.impl.LdapUser;
 import com.nhds.wasabi.userdirectory.impl.LdapUserDirectory;
 import org.apache.commons.codec.binary.Base64;
@@ -53,14 +52,12 @@ import java.util.Map;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import static com.intuit.wasabi.authorizationobjects.Permission.SUPERADMIN;
 import static org.slf4j.LoggerFactory.getLogger;
 
-/**
- * The default authorization implementation for noop authentication
- */
 public class LdapAuthorization implements Authorization {
     private static final String LDAP_OPERATION_NOT_SUPPORTED = "Roles are managed via LDAP. Contact your administrator for assistance.";
     private static final String LDAP_USER_CACHE_USERNAME = "ldap_user_cache";
@@ -84,7 +81,7 @@ public class LdapAuthorization implements Authorization {
     @Inject
     public LdapAuthorization(ApplicationListAccessor applicationListAccessor,
             final AuthorizationRepository authorizationRepository, final Experiments experiments,
-            final EventLog eventLog, LdapUserDirectory userDirectory) {
+            final EventLog eventLog, final LdapUserDirectory userDirectory) {
         super();
 
         this.authorizationRepository = authorizationRepository;
@@ -125,15 +122,22 @@ public class LdapAuthorization implements Authorization {
     public UserRoleList getApplicationUsers(Application.Name applicationName) {
         // return authorizationRepository.getApplicationUsers(applicationName);
         UserRoleList userRoleList = new UserRoleList();
-        HashMap<String, LdapUser> allUsers = this.userDirectory.getUsers();
-        Iterator<LdapUser> users = allUsers.values().iterator();
-        while (users.hasNext()) {
-            LdapUser user = users.next();
+        this.userDirectory.getAllUsers().forEach(user -> {
             Role role = Role.toRole(user.getRole());
             userRoleList.addRole(UserRole.newInstance(applicationName, role).withUserID(user.getUsername())
                     .withUserEmail(user.getEmail()).withFirstName(user.getFirstName()).withLastName(user.getLastName())
                     .build());
-        }
+        });
+        ;
+
+        /*
+         * HashMap<String, LdapUser> allUsers = this.userDirectory.getUsers(); Iterator<LdapUser> users =
+         * allUsers.values().iterator(); while (users.hasNext()) { LdapUser user = users.next(); Role role =
+         * Role.toRole(user.getRole()); userRoleList.addRole(UserRole.newInstance(applicationName,
+         * role).withUserID(user.getUsername())
+         * .withUserEmail(user.getEmail()).withFirstName(user.getFirstName()).withLastName(user.getLastName())
+         * .build()); }
+         */
         return userRoleList;
     }
 
@@ -141,8 +145,9 @@ public class LdapAuthorization implements Authorization {
     public UserPermissions getUserPermissions(UserInfo.Username userID, Application.Name applicationName) {
         UserPermissions result = null;
         LdapUser user = this.userDirectory.lookupLdapUser(userID);
-        if(user!=null && user.getRole()!=null) {
-            result = UserPermissions.newInstance(applicationName, Role.toRole(user.getRole()).getRolePermissions()).build();    
+        if (user != null && user.getRole() != null) {
+            result = UserPermissions.newInstance(applicationName, Role.toRole(user.getRole()).getRolePermissions())
+                    .build();
         }
         return result;
     }
@@ -177,19 +182,17 @@ public class LdapAuthorization implements Authorization {
 
     @Override
     public UserRoleList getUserRoleList(UserInfo.Username userID) {
-        //return authorizationRepository.getUserRoleList(userID);
+        // return authorizationRepository.getUserRoleList(userID);
         UserRoleList userRoleList = new UserRoleList();
         LdapUser userInfo = this.userDirectory.lookupLdapUser(userID);
-        if(userInfo!=null) {
+        if (userInfo != null) {
             List<String> allAppNames = getAllApplicationNameFromApplicationList();
             Iterator<String> apps = allAppNames.iterator();
-            while(apps.hasNext()) {
-                userRoleList.addRole(UserRole.newInstance(Application.Name.valueOf(apps.next()), Role.toRole(userInfo.getRole()))
-                .withUserID(userID)
-                .withUserEmail(userInfo.getEmail())
-                .withFirstName(userInfo.getFirstName())
-                .withLastName(userInfo.getLastName())
-                .build());
+            while (apps.hasNext()) {
+                userRoleList.addRole(
+                        UserRole.newInstance(Application.Name.valueOf(apps.next()), Role.toRole(userInfo.getRole()))
+                                .withUserID(userID).withUserEmail(userInfo.getEmail())
+                                .withFirstName(userInfo.getFirstName()).withLastName(userInfo.getLastName()).build());
             }
         }
         return userRoleList;
@@ -208,10 +211,9 @@ public class LdapAuthorization implements Authorization {
         UserInfo result;
         if (userID != null && !StringUtils.isBlank(userID.toString())) {
             result = this.userDirectory.lookupUser(userID);
-            if(result==null && LDAP_USER_CACHE_USERNAME.equals(userID.getUsername())) {
+            if (result == null && LDAP_USER_CACHE_USERNAME.equals(userID.getUsername())) {
                 result = new UserInfo.Builder(UserInfo.Username.valueOf(LDAP_USER_CACHE_USERNAME))
-                        .withUserId(LDAP_USER_CACHE_USERNAME)
-                        .build();
+                        .withUserId(LDAP_USER_CACHE_USERNAME).build();
             }
         } else {
             throw new AuthenticationException("The user name was null or empty for retrieving the UserInfo.");
@@ -260,7 +262,7 @@ public class LdapAuthorization implements Authorization {
 
     @Override
     public void removeUserFromSuperAdminRole(final UserInfo candidateUserInfo, final UserInfo assigningUserInfo) {
-        if(LDAP_USER_CACHE_USERNAME.equals(candidateUserInfo.getUsername().getUsername())) {
+        if (LDAP_USER_CACHE_USERNAME.equals(candidateUserInfo.getUsername().getUsername())) {
             this.userDirectory.refreshCache();
             throw new UnsupportedOperationException("Cache refresh completed");
         }
@@ -270,22 +272,30 @@ public class LdapAuthorization implements Authorization {
     @Override
     public List<UserRole> getSuperAdminRoleList() {
         LOGGER.debug("Getting all super admins");
-        //return authorizationRepository.getSuperAdminRoleList();
+        // return authorizationRepository.getSuperAdminRoleList();
         List<UserRole> userRoleList = new ArrayList<UserRole>();
-        HashMap<String, LdapUser> allUsers = this.userDirectory.getUsers();
-        Iterator<LdapUser> users = allUsers.values().iterator();
-        while (users.hasNext()) {
-            LdapUser user = users.next();
+        this.userDirectory.getAllUsers().filter(user -> {
             Role role = Role.toRole(user.getRole());
-            if(Role.SUPERADMIN.equals(role)) {
-                userRoleList.add(UserRole.newInstance(WILDCARD, role).withUserID(user.getUsername())
-                        .withUserEmail(user.getEmail()).withFirstName(user.getFirstName()).withLastName(user.getLastName())
-                        .build());
-            }
-        }
-        userRoleList.add(UserRole.newInstance(WILDCARD, Role.SUPERADMIN).withUserID(UserInfo.Username.valueOf(LDAP_USER_CACHE_USERNAME))
-                .withUserEmail("ldap_user_cache@LDAP").withFirstName("User").withLastName("Cache")
-                .build());
+            return Role.SUPERADMIN.equals(role);
+        }).forEach(superAdmin -> {
+            userRoleList.add(UserRole.newInstance(WILDCARD, Role.toRole(superAdmin.getRole()))
+                    .withUserID(superAdmin.getUsername()).withUserEmail(superAdmin.getEmail())
+                    .withFirstName(superAdmin.getFirstName()).withLastName(superAdmin.getLastName()).build());
+        });
+        userRoleList.add(UserRole.newInstance(WILDCARD, Role.SUPERADMIN)
+                .withUserID(UserInfo.Username.valueOf(LDAP_USER_CACHE_USERNAME)).withUserEmail("ldap_user_cache@LDAP")
+                .withFirstName("User").withLastName("Cache").build());
+        /*
+         * HashMap<String, LdapUser> allUsers = this.userDirectory.getUsers(); Iterator<LdapUser> users =
+         * allUsers.values().iterator(); while (users.hasNext()) { LdapUser user = users.next(); Role role =
+         * Role.toRole(user.getRole()); if (Role.SUPERADMIN.equals(role)) {
+         * userRoleList.add(UserRole.newInstance(WILDCARD, role).withUserID(user.getUsername())
+         * .withUserEmail(user.getEmail()).withFirstName(user.getFirstName())
+         * .withLastName(user.getLastName()).build()); } } userRoleList.add(UserRole.newInstance(WILDCARD,
+         * Role.SUPERADMIN)
+         * .withUserID(UserInfo.Username.valueOf(LDAP_USER_CACHE_USERNAME)).withUserEmail("ldap_user_cache@LDAP")
+         * .withFirstName("User").withLastName("Cache").build());
+         */
         return userRoleList;
     }
 

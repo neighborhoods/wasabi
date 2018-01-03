@@ -18,7 +18,7 @@ fi
 if [[ "$_java" ]]; then
     version=$("$_java" -version 2>&1 | awk -F '"' '/version/ {print $2}')
     #echo version "$version"
-    if [[ "$version" != "1.8.0_144" ]]; then
+    if [[ "$version" != 1.8.* ]]; then
         echo -e "${RED}ERROR:${NC} Unexpected version of Java is installed ($version). Wasabi/maven plugin dependancies will cause build to fail. Use Java version 1.8.0_144"; 
 	exit 1; 
     fi

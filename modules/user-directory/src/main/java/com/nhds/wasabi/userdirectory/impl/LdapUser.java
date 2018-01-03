@@ -108,7 +108,7 @@ public class LdapUser {
     public String getRole() {
         return this.role;
     }
-    public void setRole(String role) {
+    protected void setRole(String role) {
         this.role = role;
     }
     @Override
