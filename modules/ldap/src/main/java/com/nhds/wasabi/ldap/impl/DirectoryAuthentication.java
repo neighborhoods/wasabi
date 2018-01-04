@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.authentication.impl;
+package com.nhds.wasabi.ldap.impl;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
@@ -18,10 +18,9 @@ import com.intuit.wasabi.authentication.Authentication;
 import com.intuit.wasabi.authenticationobjects.LoginToken;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.exceptions.AuthenticationException;
-import com.nhds.wasabi.authentication.impl.LdapUserCredential;
-import com.nhds.wasabi.userdirectory.impl.LdapUser;
-import com.nhds.wasabi.userdirectory.impl.LdapUserDirectory;
-
+import com.nhds.wasabi.ldap.impl.DirectoryUserCredential;
+import com.nhds.wasabi.ldap.CachedUserDirectory;
+import com.nhds.wasabi.ldap.impl.DirectoryUser;
 import org.slf4j.Logger;
 
 import static com.google.common.base.Optional.fromNullable;
@@ -33,18 +32,18 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * Default authentication implementation
  */
-public class LdapAuthentication implements Authentication {
+public class DirectoryAuthentication implements Authentication {
 
     private static final String SPACE = " ";
     private static final String SEMICOLON = ":";
     public static final String BASIC = "Basic";
     public static final String EMPTY = "";
-    private static final Logger LOGGER = getLogger(LdapAuthentication.class);
-    private final LdapUserDirectory userDirectory;
+    private static final Logger LOGGER = getLogger(DirectoryAuthentication.class);
+    private final CachedUserDirectory userDirectory;
 
     @Inject
-    public LdapAuthentication(final LdapUserDirectory ldapUserDirectory) {
-        this.userDirectory = ldapUserDirectory;
+    public DirectoryAuthentication(CachedUserDirectory userDirectory) {
+        this.userDirectory = userDirectory;
     }
 
     /**
@@ -57,10 +56,10 @@ public class LdapAuthentication implements Authentication {
     public LoginToken logIn(final String authHeader) {
         LOGGER.debug("Authentication header received as: {}", authHeader);
 
-        LdapUserCredential credential = parseUsernamePassword(fromNullable(authHeader));
-        LdapUser user = userDirectory.authenticate(credential.username, credential.password);
+        DirectoryUserCredential credential = parseUsernamePassword(fromNullable(authHeader));
+        DirectoryUser user = userDirectory.authenticate(credential.username, credential.password);
         if (user != null) {
-            LdapUserCredential encodedCredentials = new LdapUserCredential(user.getUsername().getUsername(),
+            DirectoryUserCredential encodedCredentials = new DirectoryUserCredential(user.getUsername().getUsername(),
                     user.getPassword());
             return withAccessToken(encodedCredentials.toBase64Encode()).withTokenType(BASIC).build();
         } else {
@@ -78,9 +77,9 @@ public class LdapAuthentication implements Authentication {
     public LoginToken verifyToken(final String tokenHeader) {
         LOGGER.debug("Authentication token received as: {}", tokenHeader);
 
-        LdapUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
+        DirectoryUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
 
-        if (userDirectory.isLdapTokenValid(credential.username, credential.password)) {
+        if (userDirectory.isDirectoryTokenValid(credential.username, credential.password)) {
             return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
         } else {
             throw new AuthenticationException("Authentication Token is not valid");
@@ -120,7 +119,7 @@ public class LdapAuthentication implements Authentication {
      * @param authHeader The http authroization header
      * @return LdapUserCredential for the authHeader
      */
-    private LdapUserCredential parseUsernamePassword(final Optional<String> authHeader) {
+    private DirectoryUserCredential parseUsernamePassword(final Optional<String> authHeader) {
         if (!authHeader.isPresent()) {
             throw new AuthenticationException("Null Authentication Header is not supported");
         }
@@ -153,6 +152,6 @@ public class LdapAuthentication implements Authentication {
             throw new AuthenticationException("Username or password are empty.");
         }
 
-        return new LdapUserCredential(fields[0], fields[1]);
+        return new DirectoryUserCredential(fields[0], fields[1]);
     }
 }

@@ -1,19 +1,16 @@
-/*******************************************************************************
- * Copyright 2016 Intuit
+/**
+ * Copyright 2018 Neighborhoods.com
  * <p>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *******************************************************************************/
-package com.nhds.wasabi.userdirectory.impl;
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+package com.nhds.wasabi.ldap.impl;
 
 import io.swagger.annotations.ApiModelProperty;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
@@ -26,18 +23,18 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 /**
  * Wrapper class to workaround inability to modify the UserInfo class
  */
-public class LdapUser {
+public class DirectoryUser {
     @ApiModelProperty(value = "the user's role", required = false)
     private String role;
     private UserInfo userInfo;
     private long cacheTimestamp;
-    protected LdapUser(UserInfo userInfo) {
+    protected DirectoryUser(UserInfo userInfo) {
         super();
         this.userInfo = userInfo;
         Date now = new Date();
         this.cacheTimestamp = now.getTime();
     }
-    public LdapUser(UserInfo userInfo, String role) {
+    public DirectoryUser(UserInfo userInfo, String role) {
         super();
         this.userInfo = userInfo;
         this.role = role;
@@ -120,14 +117,14 @@ public class LdapUser {
     public boolean equals(Object obj) {
         if (obj == null) return false;
         if (obj == this) return true;
-        if (!(obj instanceof LdapUser)) {
+        if (!(obj instanceof DirectoryUser)) {
             return false;
         }
 
-        UserInfo otherUserInfo = ((LdapUser) obj).getUserInfo();
+        UserInfo otherUserInfo = ((DirectoryUser) obj).getUserInfo();
         if(otherUserInfo.equals(this.getUserInfo())) {
             return new EqualsBuilder()
-                    .append(role, ((LdapUser) obj).getRole())
+                    .append(role, ((DirectoryUser) obj).getRole())
                     .isEquals();
         }
         return false;

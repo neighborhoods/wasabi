@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.authorization.impl;
+package com.nhds.wasabi.ldap.impl;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -35,8 +35,8 @@ import com.intuit.wasabi.repository.cassandra.accessor.ApplicationListAccessor;
 import com.intuit.wasabi.repository.cassandra.pojo.AppRole;
 import com.intuit.wasabi.repository.cassandra.pojo.ApplicationList;
 import com.datastax.driver.mapping.Result;
-import com.nhds.wasabi.userdirectory.impl.LdapUser;
-import com.nhds.wasabi.userdirectory.impl.LdapUserDirectory;
+import com.nhds.wasabi.ldap.impl.DirectoryUser;
+import com.nhds.wasabi.ldap.impl.LdapUserDirectory;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ import java.util.stream.StreamSupport;
 import static com.intuit.wasabi.authorizationobjects.Permission.SUPERADMIN;
 import static org.slf4j.LoggerFactory.getLogger;
 
-public class LdapAuthorization implements Authorization {
+public class DirectoryAuthorization implements Authorization {
     private static final String LDAP_OPERATION_NOT_SUPPORTED = "Roles are managed via LDAP. Contact your administrator for assistance.";
     private static final String LDAP_USER_CACHE_USERNAME = "ldap_user_cache";
     private static final List<Permission> SUPERADMIN_PERMISSIONS = new ArrayList<>();
@@ -66,7 +66,7 @@ public class LdapAuthorization implements Authorization {
     private static final CharSequence BASIC = "Basic";
     private static final Application.Name WILDCARD = Application.Name.valueOf("wildcard");
     private static final String COLON = ":";
-    private static final Logger LOGGER = getLogger(LdapAuthorization.class);
+    private static final Logger LOGGER = getLogger(DirectoryAuthorization.class);
 
     static {
         SUPERADMIN_PERMISSIONS.add(SUPERADMIN);
@@ -79,7 +79,7 @@ public class LdapAuthorization implements Authorization {
     private final ApplicationListAccessor applicationListAccessor;
 
     @Inject
-    public LdapAuthorization(ApplicationListAccessor applicationListAccessor,
+    public DirectoryAuthorization(ApplicationListAccessor applicationListAccessor,
             final AuthorizationRepository authorizationRepository, final Experiments experiments,
             final EventLog eventLog, final LdapUserDirectory userDirectory) {
         super();
@@ -106,7 +106,7 @@ public class LdapAuthorization implements Authorization {
     @Override
     public UserPermissionsList getUserPermissionsList(UserInfo.Username userID) {
         UserPermissionsList userPermissionsList = new UserPermissionsList();
-        LdapUser userInfo = this.userDirectory.lookupLdapUser(userID);
+        DirectoryUser userInfo = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (userInfo != null) {
             List<String> allAppNames = getAllApplicationNameFromApplicationList();
 
@@ -144,7 +144,7 @@ public class LdapAuthorization implements Authorization {
     @Override
     public UserPermissions getUserPermissions(UserInfo.Username userID, Application.Name applicationName) {
         UserPermissions result = null;
-        LdapUser user = this.userDirectory.lookupLdapUser(userID);
+        DirectoryUser user = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (user != null && user.getRole() != null) {
             result = UserPermissions.newInstance(applicationName, Role.toRole(user.getRole()).getRolePermissions())
                     .build();
@@ -184,7 +184,7 @@ public class LdapAuthorization implements Authorization {
     public UserRoleList getUserRoleList(UserInfo.Username userID) {
         // return authorizationRepository.getUserRoleList(userID);
         UserRoleList userRoleList = new UserRoleList();
-        LdapUser userInfo = this.userDirectory.lookupLdapUser(userID);
+        DirectoryUser userInfo = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (userInfo != null) {
             List<String> allAppNames = getAllApplicationNameFromApplicationList();
             Iterator<String> apps = allAppNames.iterator();
@@ -200,7 +200,7 @@ public class LdapAuthorization implements Authorization {
 
     @Override
     public void checkSuperAdmin(UserInfo.Username userID) {
-        LdapUser user = this.userDirectory.lookupLdapUser(userID);
+        DirectoryUser user = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (!Role.toRole(user.getRole()).equals(Role.SUPERADMIN)) {
             throw new AuthenticationException("error, user " + userID + " is not a superadmin");
         }

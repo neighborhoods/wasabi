@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.userdirectory.impl;
+package com.nhds.wasabi.ldap.impl;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -37,11 +37,13 @@ import org.apache.directory.ldap.client.api.LdapNetworkConnection;
 
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.exceptions.AuthenticationException;
+import com.nhds.wasabi.ldap.CachedUserDirectory;
+import com.nhds.wasabi.ldap.DirectoryDelegate;
 
 import static com.intuit.autumn.utils.PropertyFactory.create;
 import static com.intuit.autumn.utils.PropertyFactory.getProperty;
 
-public class LdapRequestDelegate implements LdapDelegateInterface {
+public class LdapDelegate implements DirectoryDelegate {
     private static final int LDAP_BCRYPT_ROUNDS = 7;
     private static SearchRequest userCacheSearchRequest;
     private LdapConfig config;
@@ -220,7 +222,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         }
 
         public LdapConfig() {
-            Properties properties = create(PROPERTY_NAME, LdapRequestDelegate.class);
+            Properties properties = create(PROPERTY_NAME, LdapDelegate.class);
             this.setLdapHost(getProperty("ldap.host", properties));
             this.setLdapPort(Integer.parseInt(getProperty("ldap.port", properties, "10389")));
             this.setUseSecureConnection(Boolean.parseBoolean(getProperty("ldap.secure", properties, "false")));
@@ -279,7 +281,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         return userCacheSearchRequest;
     }
 
-    public void populateUserCache(LdapUserDirectory userDirectory) throws AuthenticationException {
+    public void populateUserCache(CachedUserDirectory userDirectory) throws AuthenticationException {
         try (LdapConnection connection = getLdapInfoConnection()) {
             if (connection.isConnected() && connection.isAuthenticated()) {
                 try (SearchCursor searchCursor = connection.search(getUserCacheSearchRequest())) {
@@ -304,7 +306,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
                                 try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
                                         "(" + this.config.getLoginEntity() + "=" + member + ")",
                                         SearchScope.ONELEVEL)) {
-                                    LdapUser user = getLdapUserViaCursor(cursor);
+                                    DirectoryUser user = getDirectoryUserViaCursor(cursor);
                                     if (user != null) {
                                         user.setRole(role);
                                         userDirectory.addUserToCache(user);
@@ -326,7 +328,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         }
     }
 
-    public LdapUser getLdapUserByUsername(LdapUserDirectory userDirectory, String username)
+    public DirectoryUser getDirectoryUserByUsername(CachedUserDirectory userDirectory, String username)
             throws AuthenticationException {
         try (LdapConnection connection = getLdapInfoConnection()) {
             if (connection.isConnected() && connection.isAuthenticated()) {
@@ -346,11 +348,11 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
                 }
                 try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
                         "(" + this.config.getLoginEntity() + "=" + username + ")", SearchScope.ONELEVEL)) {
-                    LdapUser ldapUser = getLdapUserViaCursor(cursor);
-                    if (ldapUser != null) {
-                        ldapUser.setRole(role);
-                        userDirectory.addUserToCache(ldapUser);
-                        return ldapUser;
+                    DirectoryUser DirectoryUser = getDirectoryUserViaCursor(cursor);
+                    if (DirectoryUser != null) {
+                        DirectoryUser.setRole(role);
+                        userDirectory.addUserToCache(DirectoryUser);
+                        return DirectoryUser;
                     }
                 }
             }
@@ -370,7 +372,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         return connection;
     }
 
-    protected LdapUser getLdapUserViaCursor(EntryCursor cursor) throws LdapInvalidAttributeValueException {
+    protected DirectoryUser getDirectoryUserViaCursor(EntryCursor cursor) throws LdapInvalidAttributeValueException {
         for (Entry entry : cursor) {
             String firstName = "";
             String lastName = "";
@@ -394,20 +396,20 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
             if (attr != null) {
                 email = attr.getString();
             }
-            return new LdapUser(new UserInfo.Builder(UserInfo.Username.valueOf(username)).withFirstName(firstName)
+            return new DirectoryUser(new UserInfo.Builder(UserInfo.Username.valueOf(username)).withFirstName(firstName)
                     .withLastName(lastName).withEmail(email).withUserId(username).build());
         }
         return null;
     }
 
-    public LdapUser getLdapUserByEmail(LdapUserDirectory userDirectory, String email) throws AuthenticationException {
+    public DirectoryUser getDirectoryUserByEmail(CachedUserDirectory userDirectory, String email) throws AuthenticationException {
         try (LdapConnection connection = getLdapInfoConnection()) {
             if (connection.isConnected() && connection.isAuthenticated()) {
                 try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
                         "(" + this.config.getPersonEmailAttribute() + "=" + email + ")", SearchScope.ONELEVEL)) {
                     // Note: Because this method cannot verify role access by email and lookups by email are only
                     // performed for authorization assignments, this is intentionally not cached
-                    return getLdapUserViaCursor(cursor);
+                    return getDirectoryUserViaCursor(cursor);
                 }
             }
         } catch (LdapException e) {
@@ -418,7 +420,7 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         return null;
     }
 
-    public LdapUser authenticate(LdapUserDirectory ldapUserDirectory, String username, String password)
+    public DirectoryUser authenticate(CachedUserDirectory userDirectory, String username, String password)
             throws AuthenticationException {
         try (LdapConnection connection = getLdapConnection()) {
             connection.bind(this.config.getLoginEntity() + "=" + username + "," + this.config.getBaseDN(), password);
@@ -440,11 +442,11 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
                 }
                 try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
                         "(" + this.config.getLoginEntity() + "=" + username + ")", SearchScope.ONELEVEL)) {
-                    LdapUser ldapUser = getLdapUserViaCursor(cursor);
+                    DirectoryUser ldapUser = getDirectoryUserViaCursor(cursor);
                     if(ldapUser!=null) {
                         ldapUser.setRole(role);
                         ldapUser.setPassword(encryptPassword(password));
-                        ldapUserDirectory.addUserToCache(ldapUser);
+                        userDirectory.addUserToCache(ldapUser);
                     }
                     return ldapUser;
                 }
@@ -463,22 +465,22 @@ public class LdapRequestDelegate implements LdapDelegateInterface {
         return BCrypt.hashPw(password, BCrypt.gensalt(LDAP_BCRYPT_ROUNDS));
     }
 
-    public LdapRequestDelegate() {
+    public LdapDelegate() {
         this.config = new LdapConfig();
     }
 
     private static class SingletonHelper {
-        private static final LdapRequestDelegate INSTANCE = new LdapRequestDelegate();
+        private static final LdapDelegate INSTANCE = new LdapDelegate();
     }
 
-    public static LdapRequestDelegate getInstance() {
+    public static LdapDelegate getInstance() {
         return SingletonHelper.INSTANCE;
     }
 
-    public boolean isLdapTokenValid(LdapUserDirectory ldapUserDirectory, String username, String encodedPassword) {
+    public boolean isDirectoryTokenValid(CachedUserDirectory userDirectory, String username, String encodedPassword) {
         try {
             // Encoded passwords are only in the cache
-            LdapUser userInfo = ldapUserDirectory.lookupLdapUser(UserInfo.Username.valueOf(username));
+            DirectoryUser userInfo = userDirectory.lookupDirectoryUser(username);
             if (userInfo != null && userInfo.getPassword() != null) {
                 return userInfo.getPassword().equals(encodedPassword);
             }
