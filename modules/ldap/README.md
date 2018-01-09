@@ -62,7 +62,7 @@ Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters a
 | ldap.person.last.attribute | The attribute name for accessing a user's last name | `sn` |
 
 ## Extending Wasabi LDAP
-At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we choose to build and share this extension publically. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
+At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we chose to build and share this extension publically. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
 
 Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key classes:
  ```java 
@@ -86,8 +86,9 @@ Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key
 
 To build Wasabi and include the LDAP module:
 1. Create the directory `modules\ldap` and checkout the LDAP project via git.
+	`git checkout https://github.com/neighborhoods/Wasabi-LDAP`
 1. Update the root `pom.xml` and add `<module>modules/ldap</module>` under the `<modules>` tag.
-1. (*Optional*) If you need to change the default implementer for any of the delegate classes, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
+1. (*Optional*) If you need to change the default implementer for any of the delegate classes, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
 1. For any build with LDAP source files included, you *must* add all of the following properties in your root `pom.xml` within the `<properties>` parent tag. This is so the downstream property files are initialized properly. For LDAP configuration options, if you want to specify the values downstream or use the defaults simply leave the tag values blank:
 ```xml
 <!-- LDAP -->
