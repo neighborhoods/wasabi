@@ -85,7 +85,7 @@ Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key
 ```
 
 To build Wasabi and include the LDAP module:
-1. Create the directory `modules\ldap` and checkout the LDAP project via git.
+1. Create the directory `modules/ldap` and checkout the LDAP project via git.
 	`git checkout https://github.com/neighborhoods/Wasabi-LDAP`
 1. Update the root `pom.xml` and add `<module>modules/ldap</module>` under the `<modules>` tag.
 1. (*Optional*) If you need to change the default implementer for any of the delegate classes, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
