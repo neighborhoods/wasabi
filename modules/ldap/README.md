@@ -12,7 +12,7 @@ To support new authentication mechanisms, this project adds support for a cached
 * **Simplified security with increased performance** - All security is managed via LDAP--simplifying your user management. Furthermore, using encrypted passwords/cookies and a cached user directory, this project builds and extends existing Wasabi classes and functionality.
 
 ## Installation
-### Deploy the compiled JARs as a dependancy
+### Option A: Deploy the compiled JAR as a dependancy
 Wasabi-LDAP is deployed in the Maven central repository. *TBD* -- Need to confirm preferred approach/repository for Maven dependancy management storage
  1. Add the following dependancy to your main Wasabi `pom.xml`:
 	  ```xml
@@ -26,27 +26,27 @@ Wasabi-LDAP is deployed in the Maven central repository. *TBD* -- Need to confir
  
 Note: For future compatibility with newer builds of Wasabi, Wasabi-LDAP specifies the dependancy version as *greater than* the last tested version of Wasabi (e.g. `<version>[1.0.20170418213834,)</version>`). This is not a guarantee that it will function with higher versions, but as long as the underlying `Authentication` and `Authorization` interface contracts do not change, this should ensure forward-compatibility. 
 
-### Include the source files directly in your build
+### Option B: Include the source files directly in your build
  *See [Extending Wasabi LDAP](#extending-wasabi-ldap) section for guidance on this approach*
  
-### Configuration 
+## Configuration 
 Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters are loaded via the following heirarchy (later options take precedence):
  * Root `pom.xml` of the Wasabi project. Important Notes: 
       * You must include the `wasabi-ldap` module and build from source if you elect to use this method of property injection.
       * All properties (even unusued/unchanged properties) must be specified in the `pom.xml`. Use an empty value to defer to the default.
  * Manually modified in the `ldap.properties` file included in the main JAR
- * Environment variables
+ * Set as environment variables at runtime
  
 | Property              | Description   | Example Value  |
 | --------------------- |:-------------------------------------------------------------| :----------------:|
-| user.lookup.class.name| This is the core Wasabi UserDirectory implementor. To use LDAP, this must be set to an implementer that also implements the CachedDirectory interface | `com.nhds.wasabi.ldap.impl.LdapUserDirectory` |
+| user.lookup.class.name| This is the core Wasabi UserDirectory implementor. To use LDAP, this must be set to a class that also implements the CachedDirectory interface | `com.nhds.wasabi.ldap.impl.LdapUserDirectory` |
 | authorization.class.name | This is the core Wasabi Authorization interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthorization` |
 | authentication.class.name | This is the core Wasabi Authentication interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthentication`  |
 | ldap.delegate.class | This is the DirectoryDelegate implementor. A default implementor for LDAP has been provided. | `com.nhds.wasabi.ldap.impl.LdapDelegate` |
 | ldap.host | The host name for the LDAP server. Note: If using a LDAP server on the same host as the docker image, use the `docker.for.mac.localhost` reserved hostname. | `123.456.78.9` |
 | ldap.dn.base | The base distinguished name for all queries. | `dc=example,dc=com` |
 | ldap.dn.wasabi | The Wasabi distinguished name. Groups will be queried under this dn. | `cn=Wasabi,dc=example,dc=com` |
-| ldap.dn.info | An information distinguished name is used for querying LDAP for user details (e.g. for the user list). | cn=info,dc=example,dc=com |
+| ldap.dn.info | An information distinguished name is used for querying LDAP for user details (e.g. for the user list). | `cn=info,dc=example,dc=com` |
 | ldap.dn.info.password | The bind password for the info dn. | `Example123` |
 | ldap.port | The port LDAP is listening on. | `10389` |
 | ldap.secure | Whether to secure the LDAP connection | `false` |
