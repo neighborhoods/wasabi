@@ -13,6 +13,40 @@ To support new authentication mechanisms, this project adds support for a cached
 
 ## Installation
 
+### Configuration 
+
+| Property              | Description   | Example Value  |
+| --------------------- |:-------------------------------------------------------------| :----------------:|
+| user.lookup.class.name| This is the core Wasabi UserDirectory implementor. To use LDAP, this must be set to an implementer that also implements the CachedDirectory interface | `com.nhds.wasabi.ldap.impl.LdapUserDirectory` |
+| authorization.class.name | This is the core Wasabi Authorization interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthorization` |
+| authentication.class.name | This is the core Wasabi Authentication interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthentication`  |
+| ldap.delegate.class | This is the DirectoryDelegate implementor. A default implementor for LDAP has been provided. | `com.nhds.wasabi.ldap.impl.LdapDelegate` |
+| ldap.host | The host name for the LDAP server. Note: If using a LDAP server on the same host as the docker image, use the `docker.for.mac.localhost` reserved hostname. | `123.456.78.9` |
+| ldap.dn.base | The base distinguished name for all queries. | `dc=example,dc=com` |
+| ldap.dn.wasabi | The Wasabi distinguished name. Groups will be queried under this dn. | `cn=Wasabi,dc=example,dc=com` |
+| ldap.dn.info | An information distinguished name is used for querying LDAP for user details (e.g. for the user list). | cn=info,dc=example,dc=com |
+| ldap.dn.info.password | The bind password for the info dn. | `Example123` |
+| ldap.port | The port LDAP is listening on. | `10389` |
+| ldap.secure | Whether to secure the LDAP connection | `false` |
+| ldap.login.attribute | The attribute name to access the login value. | `uid` |
+| ldap.member.attribute | The attribute name to access the member value(s) for Wasabi groups. | `member` |
+| ldap.role.attribute | The attribute name to access the role group for a user. | `cn` |
+| ldap.group.admin | The group name for the Admin role (read/write/delete for all applications) | `Admin` |
+| ldap.group.superadmin | The group name for the Admin role (read/write/delete for all applications, clear cache) | `SuperAdmin` |
+| ldap.group.reader | The group name for the Reader role (read for all applications) | `Reader` |
+| ldap.group.writer | The group name for the Writer role (read/write for all applications) | `Writer` |
+| ldap.person.email.attribute | The attribute name for accessing a user's email address | `mail` |
+| ldap.person.first.attribute | The attribute name for accessing a user's first name | `givenname` |
+| ldap.person.last.attribute | The attribute name for accessing a user's last name | `sn` |
+
+Wasabi LDAP follows the same property pattern as core Wasabi. Parameters are loaded via the following heirarchy (later options take precedence):
+ * Root `pom.xml` of the Wasabi project. Important Notes: 
+      * You must include the `wasabi-ldap` module and build from source if you elect to use this method of property injection.
+      * All properties (even unusued/unchanged properties) must be specified in the `pom.xml`. Use an empty value to defer to the default.
+ * Manually modified in the `ldap.properties` file included in the main JAR
+ * Environment variables
+
+
 
 
 ## Extending Wasabi LDAP
@@ -36,4 +70,38 @@ Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key
 
 ```
 
+To build Wasabi and include the LDAP module:
+1. Create the directory `modules\ldap` and checkout the LDAP project via git.
+1. Update the root `pom.xml` and add `<module>modules/ldap</module>` under the `<modules>` tag.
+1. (*Optional*) If you need to change the default implementer for any of the delegate classes, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
+1. For any build with LDAP, you *must* include all of the following properties in your root `pom.xml` within the `<properties>` parent tag. For LDAP configuration options, if you want to specify the values downstream or use the defaults simply leave the tag values blank:
+```xml
+<!-- LDAP -->
+		<user.lookup.class.name>com.nhds.wasabi.ldap.impl.LdapUserDirectory
+		</user.lookup.class.name>
+		<authorization.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthorization
+		</authorization.class.name>
+		<authentication.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthentication
+		</authentication.class.name>
+		<ldap.delegate.class>com.nhds.wasabi.ldap.impl.LdapDelegate
+		</ldap.delegate.class>
+		<ldap.host>docker.for.mac.localhost</ldap.host>
+		<ldap.dn.base>dc=example,dc=com</ldap.dn.base>
+		<ldap.dn.wasabi>cn=Wasabi,dc=example,dc=com</ldap.dn.wasabi>
+		<ldap.dn.info>cn=info,dc=example,dc=com</ldap.dn.info>
+		<ldap.dn.info.password>examplePassword</ldap.dn.info.password>
+		<ldap.port></ldap.port>
+		<ldap.secure></ldap.secure>
+		<ldap.login.attribute></ldap.login.attribute>
+		<ldap.member.attribute></ldap.member.attribute>
+		<ldap.role.attribute></ldap.role.attribute>
+		<ldap.group.admin></ldap.group.admin>
+		<ldap.group.superadmin></ldap.group.superadmin>
+		<ldap.group.reader></ldap.group.reader>
+		<ldap.group.writer></ldap.group.writer>
+		<ldap.person.email.attribute></ldap.person.email.attribute>
+		<ldap.person.first.attribute></ldap.person.first.attribute>
+		<ldap.person.last.attribute></ldap.person.last.attribute>
+<!-- /LDAP -->
 
+```
