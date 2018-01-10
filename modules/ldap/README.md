@@ -61,6 +61,13 @@ Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters a
 | ldap.person.first.attribute | The attribute name for accessing a user's first name | `givenname` |
 | ldap.person.last.attribute | The attribute name for accessing a user's last name | `sn` |
 
+### Clearing Cache
+For performance reasons, Wasabi LDAP caches user objects after retrieving them from LDAP. Due to UI limitations, the project injects a simulated user into the Super Admin list (you must be in the super admin group to access this list). 
+
+To clear the cache (e.g. if you are concerned about a user you recently removed from the LDAP group), simply click the delete button for the simulated user:
+
+
+
 ## Extending Wasabi LDAP
 At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we chose to build and share this extension publically. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
 
@@ -88,10 +95,17 @@ To build Wasabi and include the LDAP module:
 1. Create the directory `modules/ldap` and checkout the LDAP project via git.
 	`git checkout https://github.com/neighborhoods/Wasabi-LDAP`
 1. Update the root `pom.xml` and add `<module>modules/ldap</module>` under the `<modules>` tag.
-1. (*Optional*) If you need to change the default implementer for any of the delegate classes, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
+1. Now that LDAP source files will be compiled, they need to be included in the final JAR. Add the artifact as a dependancy to any module (recommended module is `main` since this is the last module built and should avoid circular dependancy references). Edit `modules/main/pom.xml` and add the following to the `<dependencies>` section:
+	```xml
+	<dependency>
+	    <groupId>com.nhds</groupId>
+	    <artifactId>wasabi-ldap</artifactId>
+	    <version>0.1.0</version>
+	</dependency>
+	```
 1. For any build with LDAP source files included, you *must* add all of the following properties in your root `pom.xml` within the `<properties>` parent tag. This is so the downstream property files are initialized properly. For LDAP configuration options, if you want to specify the values downstream or use the defaults simply leave the tag values blank:
-```xml
-<!-- LDAP -->
+	```xml
+	<!-- LDAP -->
 		<user.lookup.class.name>com.nhds.wasabi.ldap.impl.LdapUserDirectory
 		</user.lookup.class.name>
 		<authorization.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthorization
@@ -117,6 +131,6 @@ To build Wasabi and include the LDAP module:
 		<ldap.person.email.attribute></ldap.person.email.attribute>
 		<ldap.person.first.attribute></ldap.person.first.attribute>
 		<ldap.person.last.attribute></ldap.person.last.attribute>
-<!-- /LDAP -->
-
-```
+	<!-- /LDAP -->
+	```
+1. (*Optional*) If you need to change the default implementer for any of the delegate interfaces, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
