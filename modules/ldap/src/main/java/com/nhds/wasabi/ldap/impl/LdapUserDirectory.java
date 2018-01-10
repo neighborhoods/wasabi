@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 Neighborhoods.com
+ * Wasabi-LDAP Copyright 2018 Neighborhoods.com
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,82 +12,213 @@
  */
 package com.nhds.wasabi.ldap.impl;
 
-import com.google.inject.Singleton;
-import com.intuit.wasabi.authenticationobjects.UserInfo;
-import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
-import com.intuit.wasabi.userdirectory.UserDirectory;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
-import com.nhds.wasabi.ldap.DirectoryDelegate;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import com.intuit.wasabi.authenticationobjects.UserInfo;
+import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
+import com.nhds.wasabi.ldap.CachedUserDirectory;
+import com.nhds.wasabi.ldap.DirectoryDelegate;
+
+/**
+ * The Class LdapUserDirectory.
+ * 
+ * Concrete implementation of the CachedUserDirectory. This class will store user credentials for a given validity
+ * period. It will forward all calls to it's delegate for non-cached operations.
+ */
 @Singleton
 public class LdapUserDirectory implements CachedUserDirectory {
-    private static final long ONE_MINUTE_IN_MILLIS = 60000;
-    private static final int CACHE_EXPIRY_PERIOD_MINUTES = 90;
-    private ConcurrentHashMap<String, DirectoryUser> users;
-    private DirectoryDelegate ldap;
+
+    /** The Constant ONE_MINUTE_IN_MILLIS. How many milliseconds in one minute. */
+    protected static final long ONE_MINUTE_IN_MILLIS = 60000;
+
+    /** The Constant CACHE_EXPIRY_PERIOD_MINUTES. When the cache should expire. */
+    protected static final int CACHE_EXPIRY_PERIOD_MINUTES = 90;
 
     /**
-     * @param users a list of user credentials
+     * Convenience function to convert a map to stream.
+     *
+     * @param <K> the key type
+     * @param <V> the value type
+     * @param map the map
+     * @return the stream
      */
-    public LdapUserDirectory() {
-        this.ldap = LdapDelegate.getInstance();
+    private static <K, V> Stream<V> mapToStream(Map<K, V> map) {
+        return map.values().stream();
+    }
+
+    /** The cached users. */
+    protected ConcurrentHashMap<String, DirectoryUser> users;
+
+    /** The directory delegate. */
+    protected final DirectoryDelegate delegate;
+
+    /**
+     * Instantiates a new ldap user directory.
+     *
+     * @param delegate the delegate
+     */
+    @Inject
+    public LdapUserDirectory(DirectoryDelegate delegate) {
+        this.delegate = delegate;
         refreshCache();
     }
 
+    /**
+     * Add user to local cache
+     * 
+     * @param user The directory user to add to the cache
+     * @return The result of the cache put operation
+     */
+    @Override
     public DirectoryUser addUserToCache(DirectoryUser user) {
         return this.users.put(user.getUsername().getUsername(), user);
     }
 
     /**
-     * @param userEmail a user email address to check if it exists
-     * @return a userinfo contain the user with that email address
-     * @see UserDirectory#lookupUserByEmail(java.lang.String)
+     * Authenticate (e.g. during initial login) a given user
+     * 
+     * @param username - The username to authenticate
+     * @param password - The password to authenticate
+     * @return The directory user if successful
      */
     @Override
-    public UserInfo lookupUserByEmail(final String userEmail) {
-        // TODO: convert to stream
-        Iterator<Entry<String, DirectoryUser>> iterator = this.users.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Entry<String, DirectoryUser> item = iterator.next();
-            DirectoryUser cachedUser = item.getValue();
-            if (userEmail.equals(cachedUser.getEmail())) {
-                cachedUser = validateCachedUser(cachedUser);
-                if (cachedUser != null) {
-                    return cachedUser.getUserInfo();
-                }
-            }
-        }
-        DirectoryUser result = this.ldap.getDirectoryUserByEmail(this, userEmail);
-        if (result != null) {
-            return result.getUserInfo();
-        }
+    public DirectoryUser authenticate(String username, String password) {
+        return delegate.authenticate(this, username, password);
+    }
 
+    /**
+     * Get a stream of all users
+     * 
+     * @return All directory users
+     */
+    @Override
+    public Stream<DirectoryUser> getAllUsers() {
+        Stream<DirectoryUser> result = null;
+        result = mapToStream(this.users);
+        return result;
+    }
+
+    /**
+     * Gets the directory user from the cache.
+     *
+     * @param username The target user's username
+     * @return The directory user object from cache
+     */
+    protected DirectoryUser getDirectoryUserFromCache(String username) {
+        DirectoryUser cachedUser;
+        cachedUser = this.users.get(username);
+
+        if (cachedUser != null) {
+            return validateCachedUser(cachedUser);
+        }
         return null;
     }
 
-    public DirectoryUser removeUserFromCache(String username) {
-        return this.users.remove(username);
+    /**
+     * Validate a directory token
+     * 
+     * @param username The username to validate
+     * @param encryptedPassword The password to validate
+     * @return true, if a directory token is valid
+     */
+    @Override
+    public boolean isDirectoryTokenValid(String username, String encryptedPassword) {
+        return delegate.isDirectoryTokenValid(this, username, encryptedPassword);
     }
 
+    /**
+     * Find a user by username
+     * 
+     * @param username The target user's username
+     * @return The user object
+     */
+    @Override
+    public DirectoryUser lookupDirectoryUser(String username) {
+        DirectoryUser result = getDirectoryUserFromCache(username);
+        if (result != null) {
+            return result;
+        }
+        return delegate.getDirectoryUserByUsername(this, username);
+    }
+
+    /**
+     * Find a user by username
+     * 
+     * @param username The username of the target user
+     * @return The resulting user object
+     */
     @Override
     public UserInfo lookupUser(final Username username) {
         DirectoryUser result = getDirectoryUserFromCache(username.getUsername());
         if (result != null) {
             return result.getUserInfo();
         }
-        result = this.ldap.getDirectoryUserByUsername(this, username.getUsername());
+        result = delegate.getDirectoryUserByUsername(this, username.getUsername());
         if (result != null) {
             return result.getUserInfo();
         }
         return null;
     }
 
+    /**
+     * Lookup a user by email
+     * 
+     * @param userEmail the target user's email
+     * @return The resulting user object
+     */
+    @Override
+    public UserInfo lookupUserByEmail(final String userEmail) {
+        DirectoryUser result = null;
+        Optional<DirectoryUser> matchingUser = getAllUsers().filter(user -> user.getEmail().equals(userEmail))
+                .findFirst();
+        if (matchingUser.isPresent()) {
+            result = validateCachedUser(matchingUser.get());
+        }
+        if (result == null) {
+            result = delegate.getDirectoryUserByEmail(this, userEmail);
+        }
+        if (result != null) {
+            return result.getUserInfo();
+        }
+        return null;
+    }
+
+    /**
+     * Refresh the cache
+     */
+    @Override
+    public void refreshCache() {
+        if (this.users == null) {
+            this.users = new ConcurrentHashMap<String, DirectoryUser>();
+        } else {
+            this.users.clear();
+        }
+        delegate.populateUserCache(this);
+    }
+
+    /**
+     * Remove a user from the cache
+     * 
+     * @param The username of the user to remove
+     * @return The result of the remove action
+     */
+    @Override
+    public DirectoryUser removeUserFromCache(String username) {
+        return this.users.remove(username);
+    }
+
+    /**
+     * Validate a cached user (check expiration)
+     *
+     * @param cachedUser the cached user
+     * @return the directory user
+     */
     protected DirectoryUser validateCachedUser(DirectoryUser cachedUser) {
         if (cachedUser != null) {
             Date expirationDate = new Date(
@@ -99,51 +230,5 @@ public class LdapUserDirectory implements CachedUserDirectory {
             }
         }
         return cachedUser;
-    }
-
-    protected DirectoryUser getDirectoryUserFromCache(String username) {
-        DirectoryUser cachedUser;
-        cachedUser = this.users.get(username);
-
-        if (cachedUser != null) {
-            return validateCachedUser(cachedUser);
-        }
-        return null;
-    }
-
-    public DirectoryUser lookupDirectoryUser(String username) {
-        DirectoryUser result = getDirectoryUserFromCache(username);
-        if (result != null) {
-            return result;
-        }
-        return this.ldap.getDirectoryUserByUsername(this, username);
-    }
-
-    public Stream<DirectoryUser> getAllUsers() {
-        Stream<DirectoryUser> result = null;
-        result = mapToStream(this.users);
-        return result;
-    }
-
-    // Generic function to convert Map<K,V> to a Stream<V>
-    private static <K, V> Stream<V> mapToStream(Map<K, V> map) {
-        return map.values().stream();
-    }
-
-    public void refreshCache() {
-        if (this.users == null) {
-            this.users = new ConcurrentHashMap<String, DirectoryUser>();
-        } else {
-            this.users.clear();
-        }
-        ldap.populateUserCache(this);
-    }
-
-    public boolean isDirectoryTokenValid(String username, String encryptedPassword) {
-        return ldap.isDirectoryTokenValid(this, username, encryptedPassword);
-    }
-
-    public DirectoryUser authenticate(String username, String password) {
-        return ldap.authenticate(this, username, password);
     }
 }

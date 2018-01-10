@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 Neighborhoods.com
+ * Wasabi-LDAP Copyright 2018 Neighborhoods.com
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,28 +12,48 @@
  */
 package com.nhds.wasabi.ldap.impl;
 
-import io.swagger.annotations.ApiModelProperty;
-import com.intuit.wasabi.authenticationobjects.UserInfo;
-import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
-
 import java.util.Date;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 
+import com.intuit.wasabi.authenticationobjects.UserInfo;
+import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
+
+import io.swagger.annotations.ApiModelProperty;
+
 /**
- * Wrapper class to workaround inability to modify the UserInfo class
+ * Simple POJO wrapper class to workaround inability to modify the UserInfo class.
  */
 public class DirectoryUser {
+
+    /** The role. */
     @ApiModelProperty(value = "the user's role", required = false)
     private String role;
+
+    /** The user info. */
     private UserInfo userInfo;
+
+    /** The cache timestamp. */
     private long cacheTimestamp;
-    protected DirectoryUser(UserInfo userInfo) {
+
+    /**
+     * Instantiates a new directory user.
+     *
+     * @param userInfo the user info base
+     */
+    public DirectoryUser(UserInfo userInfo) {
         super();
         this.userInfo = userInfo;
         Date now = new Date();
         this.cacheTimestamp = now.getTime();
     }
+
+    /**
+     * Instantiates a new directory user.
+     *
+     * @param userInfo the user info base
+     * @param role the role
+     */
     public DirectoryUser(UserInfo userInfo, String role) {
         super();
         this.userInfo = userInfo;
@@ -41,23 +61,87 @@ public class DirectoryUser {
         Date now = new Date();
         this.cacheTimestamp = now.getTime();
     }
-    public Username getUsername() {
-        return this.userInfo.getUsername();
+
+    /**
+     * Equals operator override
+     * 
+     * @param object to compare to
+     * @return whether this is equal to the target object
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null)
+            return false;
+        if (obj == this)
+            return true;
+        if (!(obj instanceof DirectoryUser)) {
+            return false;
+        }
+
+        UserInfo otherUserInfo = ((DirectoryUser) obj).getUserInfo();
+        if (otherUserInfo.equals(this.getUserInfo())) {
+            return new EqualsBuilder().append(role, ((DirectoryUser) obj).getRole()).isEquals();
+        }
+        return false;
     }
 
-    public void setUsername(Username username) {
-        this.userInfo.setUsername(username);
+    /**
+     * Gets the cache timestamp.
+     *
+     * @return the cache timestamp
+     */
+    public long getCacheTimestamp() {
+        return cacheTimestamp;
     }
 
+    /**
+     * Gets the email.
+     *
+     * @return the email
+     */
+    public String getEmail() {
+        return this.userInfo.getEmail();
+    }
+
+    /**
+     * Gets the first name.
+     *
+     * @return the first name
+     */
+    public String getFirstName() {
+        return this.userInfo.getFirstName();
+    }
+
+    /**
+     * Gets the last name.
+     *
+     * @return the last name
+     */
+    public String getLastName() {
+        return this.userInfo.getLastName();
+    }
+
+    /**
+     * Gets the password.
+     *
+     * @return the password
+     */
     public String getPassword() {
         return this.userInfo.getPassword();
     }
 
-    public void setPassword(String password) {
-        this.userInfo.setPassword(password);
+    /**
+     * Gets the role.
+     *
+     * @return the role
+     */
+    public String getRole() {
+        return this.role;
     }
 
     /**
+     * Gets the user id.
+     *
      * @return the userId
      */
     public String getUserId() {
@@ -65,71 +149,102 @@ public class DirectoryUser {
     }
 
     /**
+     * Gets the user info.
+     *
+     * @return the user info
+     */
+    public UserInfo getUserInfo() {
+        return this.userInfo;
+    }
+
+    /**
+     * Gets the username.
+     *
+     * @return the username
+     */
+    public Username getUsername() {
+        return this.userInfo.getUsername();
+    }
+
+    /**
+     * Sets the email.
+     *
+     * @param email the new email
+     */
+    public void setEmail(String email) {
+        this.userInfo.setEmail(email);
+    }
+
+    /**
+     * Sets the first name.
+     *
+     * @param firstName the new first name
+     */
+    public void setFirstName(String firstName) {
+        this.userInfo.setFirstName(firstName);
+    }
+
+    /**
+     * Sets the last name.
+     *
+     * @param lastName the new last name
+     */
+    public void setLastName(String lastName) {
+        this.userInfo.setLastName(lastName);
+    }
+
+    /**
+     * Sets the password.
+     *
+     * @param password the new password
+     */
+    public void setPassword(String password) {
+        this.userInfo.setPassword(password);
+    }
+
+    /**
+     * Sets the role.
+     *
+     * @param role the new role
+     */
+    protected void setRole(String role) {
+        this.role = role;
+    }
+
+    /**
+     * Sets the user id.
+     *
      * @param userId the userId to set
      */
     public void setUserId(String userId) {
         this.userInfo.setUserId(userId);
     }
 
-    public String getFirstName() {
-        return this.userInfo.getFirstName();
-    }
-
-    public void setFirstName(String firstName) {
-        this.userInfo.setFirstName(firstName);
-    }
-
-    public String getLastName() {
-        return this.userInfo.getLastName();
-    }
-
-    public void setLastName(String lastName) {
-        this.userInfo.setLastName(lastName);
-    }
-
-    public String getEmail() {
-        return this.userInfo.getEmail();
-    }
-
-    public void setEmail(String email) {
-        this.userInfo.setEmail(email);
-    }
-    
-    public UserInfo getUserInfo(){
-        return this.userInfo;
-    }
-    
+    /**
+     * Sets the user info.
+     *
+     * @param userInfo the new user info
+     */
     public void setUserInfo(UserInfo userInfo) {
         this.userInfo = userInfo;
     }
-    public String getRole() {
-        return this.role;
+
+    /**
+     * Sets the username.
+     *
+     * @param username the new username
+     */
+    public void setUsername(Username username) {
+        this.userInfo.setUsername(username);
     }
-    protected void setRole(String role) {
-        this.role = role;
-    }
+
+    /**
+     * Converts this object to a string representation
+     * 
+     * @return String representation of the object
+     */
     @Override
     public String toString() {
-        return "LdapUser[UserInfo ["+this.userInfo.toString()+"], role="+this.role+"]";
-    }
-    
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) return false;
-        if (obj == this) return true;
-        if (!(obj instanceof DirectoryUser)) {
-            return false;
-        }
-
-        UserInfo otherUserInfo = ((DirectoryUser) obj).getUserInfo();
-        if(otherUserInfo.equals(this.getUserInfo())) {
-            return new EqualsBuilder()
-                    .append(role, ((DirectoryUser) obj).getRole())
-                    .isEquals();
-        }
-        return false;
-    }
-    public long getCacheTimestamp() {
-        return cacheTimestamp;
+        return "DirectoryUser[UserInfo [" + this.userInfo.toString() + "], role=" + this.role + "]";
     }
 }

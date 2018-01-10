@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 Neighborhoods.com
+ * Wasabi-LDAP Copyright 2018 Neighborhoods.com
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -15,17 +15,34 @@ package com.nhds.wasabi.ldap.impl;
 import org.apache.commons.codec.binary.Base64;
 
 /**
- * User credentials pojo
+ * The class DirectoryUserCredential.
+ * 
+ * Simple user credentials pojo. Necessary due to protected package restrictions in base UserCredential class.
  */
 public class DirectoryUserCredential {
+
+    /** The username. */
     protected final String username;
+
+    /** The password. */
     protected final String password;
 
+    /**
+     * Instantiates a new directory user credential.
+     *
+     * @param username the username
+     * @param password the password
+     */
     public DirectoryUserCredential(String username, String password) {
         this.username = username;
         this.password = password;
     }
 
+    /**
+     * Convert this object to a base 64 encoded string.
+     *
+     * @return the string
+     */
     public String toBase64Encode() {
         return new String(Base64.encodeBase64((this.username + ":" + this.password).getBytes()));
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright 2018 Neighborhoods.com
+ * Wasabi-LDAP Copyright 2018 Neighborhoods.com
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at
@@ -12,38 +12,77 @@
  */
 package com.nhds.wasabi.ldap.impl;
 
-import com.google.common.base.Optional;
-import com.google.inject.Inject;
-import com.intuit.wasabi.authentication.Authentication;
-import com.intuit.wasabi.authenticationobjects.LoginToken;
-import com.intuit.wasabi.authenticationobjects.UserInfo;
-import com.intuit.wasabi.exceptions.AuthenticationException;
-import com.nhds.wasabi.ldap.impl.DirectoryUserCredential;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
-import com.nhds.wasabi.ldap.impl.DirectoryUser;
-import org.slf4j.Logger;
-
 import static com.google.common.base.Optional.fromNullable;
 import static com.intuit.wasabi.authenticationobjects.LoginToken.withAccessToken;
 import static org.apache.commons.codec.binary.Base64.decodeBase64;
 import static org.apache.commons.lang3.StringUtils.isBlank;
 import static org.slf4j.LoggerFactory.getLogger;
 
+import org.slf4j.Logger;
+
+import com.google.common.base.Optional;
+import com.google.inject.Inject;
+import com.intuit.wasabi.authentication.Authentication;
+import com.intuit.wasabi.authenticationobjects.LoginToken;
+import com.intuit.wasabi.authenticationobjects.UserInfo;
+import com.intuit.wasabi.exceptions.AuthenticationException;
+import com.nhds.wasabi.ldap.CachedUserDirectory;
+
 /**
- * Default authentication implementation
+ * The Class DirectoryAuthentication.
+ * 
+ * This implements the Authentication interface and delegates all Authentication business logic to the
+ * CachedUserDirectory interface.
+ * 
+ * Primary purpose is to process front-end login attempts and validate authentication tokens after the user has logged
+ * in.
  */
 public class DirectoryAuthentication implements Authentication {
 
+    /** The Constant SPACE. */
     private static final String SPACE = " ";
+
+    /** The Constant SEMICOLON. */
     private static final String SEMICOLON = ":";
+
+    /** The Constant BASIC. */
     public static final String BASIC = "Basic";
+
+    /** The Constant EMPTY. */
     public static final String EMPTY = "";
+
+    /** The Constant LOGGER. */
     private static final Logger LOGGER = getLogger(DirectoryAuthentication.class);
+
+    /** The user directory. */
     private final CachedUserDirectory userDirectory;
 
+    /**
+     * Instantiates a new directory authentication.
+     *
+     * @param userDirectory the user directory
+     */
     @Inject
     public DirectoryAuthentication(CachedUserDirectory userDirectory) {
         this.userDirectory = userDirectory;
+    }
+
+    /**
+     * Check whether a user exists
+     *
+     * @param userEmail the user mail
+     * @return the UserInfo of the "admin" user
+     * @throws AuthenticationException if the user does not exist
+     */
+    @Override
+    public UserInfo getUserExists(final String userEmail) {
+        LOGGER.debug("Authentication token received as: {}", userEmail);
+
+        if (!isBlank(userEmail)) {
+            return userDirectory.lookupUserByEmail(userEmail);
+        } else {
+            throw new AuthenticationException("user does not exists in system");
+        }
     }
 
     /**
@@ -51,6 +90,7 @@ public class DirectoryAuthentication implements Authentication {
      *
      * @param authHeader the authentication header
      * @return a login token for this user (always)
+     * @throws AuthenticationException for failed login attempts
      */
     @Override
     public LoginToken logIn(final String authHeader) {
@@ -68,58 +108,26 @@ public class DirectoryAuthentication implements Authentication {
     }
 
     /**
-     * Attempts to verify the user token retrieved via the {@link #logIn(String) logIn} method
-     *
+     * Process a logout request
+     * 
      * @param tokenHeader the token header
-     * @return a login token for this user (always)
-     */
-    @Override
-    public LoginToken verifyToken(final String tokenHeader) {
-        LOGGER.debug("Authentication token received as: {}", tokenHeader);
-
-        DirectoryUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
-
-        if (userDirectory.isDirectoryTokenValid(credential.username, credential.password)) {
-            return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
-        } else {
-            throw new AuthenticationException("Authentication Token is not valid");
-        }
-    }
-
-    /**
-     * Just returns true. User need to present username and password for each action that requires credential so logout
-     * does not do anything for basic authentication
-     *
-     * @param tokenHeader the token header
-     * @return true
+     * @return success flag for logging out
      */
     @Override
     public boolean logOut(final String tokenHeader) {
+        DirectoryUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
+        userDirectory.removeUserFromCache(credential.username);
         return true;
     }
 
     /**
-     * assumes the username is the email address that is used for this method
+     * Parses the username password.
      *
-     * @param userEmail the user mail
-     * @return the UserInfo of the "admin" user
-     */
-    @Override
-    public UserInfo getUserExists(final String userEmail) {
-        LOGGER.debug("Authentication token received as: {}", userEmail);
-
-        if (!isBlank(userEmail)) {
-            return userDirectory.lookupUserByEmail(userEmail);
-        } else {
-            throw new AuthenticationException("user does not exists in system");
-        }
-    }
-
-    /**
      * @param authHeader The http authroization header
-     * @return LdapUserCredential for the authHeader
+     * @return DirectoryUserCredential for the authHeader
+     * @throws AuthenticationException for invalid headers
      */
-    private DirectoryUserCredential parseUsernamePassword(final Optional<String> authHeader) {
+    protected DirectoryUserCredential parseUsernamePassword(final Optional<String> authHeader) {
         if (!authHeader.isPresent()) {
             throw new AuthenticationException("Null Authentication Header is not supported");
         }
@@ -139,7 +147,6 @@ public class DirectoryAuthentication implements Authentication {
             throw new AuthenticationException("error parsing username and password", e);
         }
 
-        // Split username and password tokens
         String[] fields = usernameAndPassword.split(SEMICOLON);
 
         if (fields.length > 2) {
@@ -153,5 +160,25 @@ public class DirectoryAuthentication implements Authentication {
         }
 
         return new DirectoryUserCredential(fields[0], fields[1]);
+    }
+
+    /**
+     * Attempts to verify the user token retrieved via the {@link #logIn(String) logIn} method.
+     *
+     * @param tokenHeader the token header
+     * @return a login token for this user (always)
+     * @throws AuthenticationException for invalid tokens
+     */
+    @Override
+    public LoginToken verifyToken(final String tokenHeader) {
+        LOGGER.debug("Authentication token received as: {}", tokenHeader);
+
+        DirectoryUserCredential credential = parseUsernamePassword(fromNullable(tokenHeader));
+
+        if (userDirectory.isDirectoryTokenValid(credential.username, credential.password)) {
+            return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
+        } else {
+            throw new AuthenticationException("Authentication Token is not valid");
+        }
     }
 }

@@ -1,5 +1,5 @@
 <!--
-    Copyright 2016 Intuit
+    Wasabi-LDAP Copyright 2018 Neighborhoods.com
    
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,10 +24,27 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>wasabi-ldap</artifactId>
-    <packaging>jar</packaging>
-    <name>${project.artifactId}</name>
+	<groupId>com.nhds</groupId>
+	<artifactId>wasabi-ldap</artifactId>
+	<version>0.1.0</version>
+	<packaging>jar</packaging>
 
+    <name>wasabi-ldap</name>
+	<description>An extension to the core Wasabi project to implement directory authentication and authorization.</description>
+	<url>https://github.com/neighborhoods/Wasabi-LDAP</url>
+	
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	
+	<scm>
+    		<url>https://github.com/neighborhoods/Wasabi-LDAP</url>
+  	</scm>
+  	
     <dependencies>
     		<dependency>
 		  <groupId>org.apache.directory.api</groupId>
@@ -35,27 +52,27 @@
 		  <version>1.0.0</version>
 		</dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>com.intuit.wasabi</groupId>
             <artifactId>wasabi-authentication-objects</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>com.intuit.wasabi</groupId>
             <artifactId>wasabi-exceptions</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>com.intuit.wasabi</groupId>
             <artifactId>wasabi-user-directory</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>com.intuit.wasabi</groupId>
             <artifactId>wasabi-authorization</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
+            <groupId>com.intuit.wasabi</groupId>
             <artifactId>wasabi-authentication</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
