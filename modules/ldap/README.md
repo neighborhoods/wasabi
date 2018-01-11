@@ -137,3 +137,10 @@ To build Wasabi and include the LDAP module:
 1. (*Optional*) If you need to change the default implementer for any of the delegate interfaces, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
 
 Note: Wasabi-LDAP specifies the dependancy version of core Wasabi in its `pom.xml` as the last tested snapshot version of Wasabi that was compiled succesfully (e.g. `<version>1.0.20170418213834-SNAPSHOT</version>`). You may need to adjust the version dependancy if you are using a newer version of Wasabi. As long as the underlying `Authentication` and `Authorization` interface contracts do not change, Wasabi LDAP should be forward-compatible with all new versions.
+
+# References
+## Java 8 Features
+Both Wasabi and Wasabi-LDAP make use of Java8 features you may not typically encounter in other projects. Below are a few nuances to consider when reviewing the code or if you choose to extend the project.
+ * [try{} with resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) - All LDAP related calls are wrapped in try with resource blocks. This handles exceptional behavior differently than typical `try` blocks and automatically opens and closes resources.
+ * [Stream support](http://www.oracle.com/technetwork/articles/java/ma14-java-se-8-streams-2177646.html) - All collections are traversed and filtered using stream support to increase effeciencies and properly handle larger data sets. (No more iterators!)
+ * [Concurrency Classes](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentHashMap.html) - Thread safe, multi-reader/single-writer operations are handled transparently via built in concurrent classes.
