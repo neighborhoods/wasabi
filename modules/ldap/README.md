@@ -13,8 +13,8 @@ To support new authentication mechanisms, this project adds support for a cached
 
 ## Installation
 ### Option A: Deploy the compiled JAR as a dependancy
-Wasabi-LDAP is deployed in the Maven central repository. *TBD* -- Need to confirm preferred approach/repository for Maven dependancy management storage
- 1. Add the following dependancy to your main Wasabi `pom.xml`:
+Wasabi-LDAP is deployed in the Maven central repository. *TBD/WIP* -- Need to apply for `com.nhds` repository in Maven Central for hosting our public projects
+ 1. Add the following to your main Wasabi `pom.xml` under the `<dependencies>` section:
 	  ```xml
 	<dependency>
 		<groupId>com.nhds</groupId>
@@ -23,8 +23,6 @@ Wasabi-LDAP is deployed in the Maven central repository. *TBD* -- Need to confir
 	</dependency>
 	```
  1. Complete the configuration process below.
- 
-Note: For future compatibility with newer builds of Wasabi, Wasabi-LDAP specifies the dependancy version as *greater than* the last tested version of Wasabi (e.g. `<version>[1.0.20170418213834,)</version>`). This is not a guarantee that it will function with higher versions, but as long as the underlying `Authentication` and `Authorization` interface contracts do not change, this should ensure forward-compatibility. 
 
 ### Option B: Include the source files directly in your build
  *See [Extending Wasabi LDAP](#extending-wasabi-ldap) section for guidance on this approach*
@@ -95,15 +93,7 @@ To build Wasabi and include the LDAP module:
 1. Create the directory `modules/ldap` and checkout the LDAP project via git.
 	`git checkout https://github.com/neighborhoods/Wasabi-LDAP`
 1. Update the root `pom.xml` and add `<module>modules/ldap</module>` under the `<modules>` tag.
-1. Now that LDAP source files will be compiled, they need to be included in the final JAR. Add the artifact as a dependancy to any module (recommended module is `main` since this is the last module built and should avoid circular dependancy references). Edit `modules/main/pom.xml` and add the following to the `<dependencies>` section:
-	```xml
-	<dependency>
-	    <groupId>com.nhds</groupId>
-	    <artifactId>wasabi-ldap</artifactId>
-	    <version>0.1.0</version>
-	</dependency>
-	```
-1. For any build with LDAP source files included, you *must* add all of the following properties in your root `pom.xml` within the `<properties>` parent tag. This is so the downstream property files are initialized properly. For LDAP configuration options, if you want to specify the values downstream or use the defaults simply leave the tag values blank:
+1. For any build with LDAP source files included, you *must* add all of the following properties in your root `pom.xml` within the `<properties>` parent tag. This is so the downstream property files are initialized properly. Be sure to have this section replace the existing `DefaultAuthentication` and `DefaultAuthorization` properties. For all LDAP configuration options, if you want to specify the values downstream or use the default value simply leave the tag values blank:
 	```xml
 	<!-- LDAP -->
 		<user.lookup.class.name>com.nhds.wasabi.ldap.impl.LdapUserDirectory
@@ -112,6 +102,7 @@ To build Wasabi and include the LDAP module:
 		</authorization.class.name>
 		<authentication.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthentication
 		</authentication.class.name>
+		<!-- Dynamic delegate configuration only works if the LDAP module is actually installed via Guice -->
 		<ldap.delegate.class>com.nhds.wasabi.ldap.impl.LdapDelegate
 		</ldap.delegate.class>
 		<ldap.host>docker.for.mac.localhost</ldap.host>
@@ -133,4 +124,18 @@ To build Wasabi and include the LDAP module:
 		<ldap.person.last.attribute></ldap.person.last.attribute>
 	<!-- /LDAP -->
 	```
+1. Now that LDAP source files will be compiled and configured, they need to be included in the final JAR. Add the artifact as a dependancy to any module (recommended module is `main` since this is the last module built and should avoid circular dependancy references). Edit `modules/main/pom.xml` and add the following to the `<dependencies>` section:
+	```xml
+	<dependency>
+	    <groupId>com.nhds</groupId>
+	    <artifactId>wasabi-ldap</artifactId>
+	    <version>0.1.0</version>
+	</dependency>
+	```
+1. Add the following line to the `bin\build.sh` file to include the LDAP properties file in the final jar:
+	```
+	cp ./modules/ldap/target/classes/ldap.properties ${home}/${id}/conf
+	```
 1. (*Optional*) If you need to change the default implementer for any of the delegate interfaces, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
+
+Note: Wasabi-LDAP specifies the dependancy version of core Wasabi in its `pom.xml` as the last tested snapshot version of Wasabi that was compiled succesfully (e.g. `<version>1.0.20170418213834-SNAPSHOT</version>`). You may need to adjust the version dependancy if you are using a newer version of Wasabi. As long as the underlying `Authentication` and `Authorization` interface contracts do not change, Wasabi LDAP should be forward-compatible with all new versions.
