@@ -22,8 +22,11 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
+import com.intuit.wasabi.exceptions.AuthenticationException;
 import com.nhds.wasabi.ldap.CachedUserDirectory;
 import com.nhds.wasabi.ldap.DirectoryDelegate;
+
+import static java.text.MessageFormat.format;
 
 /**
  * The Class LdapUserDirectory.
@@ -186,7 +189,7 @@ public class LdapUserDirectory implements CachedUserDirectory {
         if (result != null) {
             return result.getUserInfo();
         }
-        return null;
+        throw new AuthenticationException(format("Email address does not exist: {0}", userEmail));
     }
 
     /**

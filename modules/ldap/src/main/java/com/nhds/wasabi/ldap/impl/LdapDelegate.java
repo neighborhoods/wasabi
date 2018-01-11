@@ -579,9 +579,11 @@ public class LdapDelegate implements DirectoryDelegate {
         } catch (LdapAuthenticationException authException) {
             throw new AuthenticationException("LDAP Authentication failed for " + username);
         } catch (LdapException e) {
-            throw new AuthenticationException("Error connecting to LDAP: " + e.getMessage());
+            LOGGER.debug("LDAP ERROR: Authentication failed with LdapException {}",e);
+            throw new AuthenticationException("Error connecting to LDAP");
         } catch (IOException e) {
-            throw new AuthenticationException("IO exception while connecting to LDAP: " + e.getMessage());
+            LOGGER.debug("LDAP ERROR: Refresh cache search query failed with IOException: {} Verify your LDAP configuration", e);
+            throw new AuthenticationException("IOException exception connecting to LDAP");
         }
         return null;
     }
@@ -750,12 +752,12 @@ public class LdapDelegate implements DirectoryDelegate {
             // In unlikely event multiple threads reach this point, lock initialization
             synchronized (this) {
                 SearchRequest searchRequest = new SearchRequestImpl();
-                userCacheSearchRequest.setScope(SearchScope.SUBTREE);
-                userCacheSearchRequest.addAttributes(this.config.getRoleAttribute());
-                userCacheSearchRequest.addAttributes(this.config.getMembershipAttribute());
-                userCacheSearchRequest.setTimeLimit(0);
-                userCacheSearchRequest.setBase(new Dn(this.config.getWasabiDN()));
-                userCacheSearchRequest.setFilter("(objectclass=*)");
+                searchRequest.setScope(SearchScope.SUBTREE);
+                searchRequest.addAttributes(this.config.getRoleAttribute());
+                searchRequest.addAttributes(this.config.getMembershipAttribute());
+                searchRequest.setTimeLimit(0);
+                searchRequest.setBase(new Dn(this.config.getWasabiDN()));
+                searchRequest.setFilter("(objectclass=*)");
                 userCacheSearchRequest = searchRequest;
             }
         }
@@ -839,12 +841,16 @@ public class LdapDelegate implements DirectoryDelegate {
                 }
             }
         } catch (CursorException e) {
+            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with CursorException: {} Verify your LDAP configuration",e);
             throw new AuthenticationException("LDAP Search Query Failed: " + e.getMessage());
         } catch (LdapAuthenticationException authException) {
+            LOGGER.error("LDAP FATAL ERROR: Unable to refresh cache. Check your ldap.dn.info properties and ensure appropriate access. All LDAP functionality will fail. {}",authException);;
             throw new AuthenticationException("LDAP Authentication Failed: " + authException.getMessage());
         } catch (LdapException e) {
+            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with LdapException: {} Verify your LDAP configuration",e);
             throw new AuthenticationException("Error connecting to LDAP: " + e.getMessage());
         } catch (IOException e) {
+            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with IOException: {} Verify your LDAP configuration",e);
             throw new AuthenticationException("IOException exception connecting to LDAP: " + e.getMessage());
         }
     }
