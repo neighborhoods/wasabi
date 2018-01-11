@@ -6,6 +6,8 @@ This project is an extension to the [Wasabi](https://github.com/intuit/wasabi/) 
 
 To support new authentication mechanisms, this project adds support for a cached directory service and provides a default implementation for connecting and using an LDAP server as the sole source of both authentication and authorization details.
 
+Using a variety of configuration options, the project aims to handle your customization needs. By incorporating mix-in classes to divide responsibility and seperate concerns, the project aims to allow for easy extension to support new services in the future. 
+
 ### Features
 * **Customizable** - Wasabi LDAP takes all parameters via configuration parameters. This allows you to customize to your specific LDAP configuration.
 * **Extendible** - Though the design of this project is highly configurable, all of our classes are both extendable and OOP swappable. Configure where possible, extend where necessary!
@@ -69,22 +71,18 @@ To clear the cache (e.g. if you are concerned about a user you recently removed 
 ## Extending Wasabi LDAP
 At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we chose to build and share this extension publically. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
 
-Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key classes:
+Wasabi LDAP builds on the base interfaces of Wasabi. Below is a listing of key classes:
  ```java 
  package com.nhds.wasabi.ldap;
  
  public interface CachedUserDirectory extends UserDirectory {};
- 
  public interface DirectoryDelegate {};
  
  package com.nhds.wasabi.ldap.impl;
  
  public class DirectoryAuthentication implements Authentication {};
- 
  public class DirectoryAuthorization implements Authorization {};
- 
  public class LdapDelegate implements DirectoryDelegate {};
- 
  public class LdapUserDirectory implements CachedUserDirectory {};
 
 ```
