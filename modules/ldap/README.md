@@ -139,6 +139,9 @@ To build Wasabi and include the LDAP module:
 Note: Wasabi-LDAP specifies the dependency version of core Wasabi in its `pom.xml` as the last tested snapshot version of Wasabi that was compiled successfully (e.g. `<version>1.0.20170418213834-SNAPSHOT</version>`). You may need to adjust the version dependency if you are using a newer version of Wasabi. As long as the underlying `Authentication` and `Authorization` interface contracts do not change, Wasabi LDAP should be forward-compatible with all new versions.
 
 # References
+## Overview of changes from core Wasabi
+*Note this diagram shows Authentication changes for explanatory purposes. Additional changes outside of Authentication were also performed (e.g. to Authorization)*
+![picture](WASABI-LDAP.png)
 ## Java 8 Features
 Both Wasabi and Wasabi-LDAP make use of Java8 features you may not typically encounter in other projects. Below are a few nuances to consider when reviewing the code or if you choose to extend the project.
  * [try{} with resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) - All LDAP related calls are wrapped in try with resource blocks. This handles exceptional behavior differently than typical `try` blocks and automatically opens and closes resources.
