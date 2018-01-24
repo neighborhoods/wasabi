@@ -24,7 +24,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-	<groupId>com.nhds</groupId>
+	<groupId>com.neighborhoods</groupId>
 	<artifactId>wasabi-ldap</artifactId>
 	<version>0.1.0</version>
 	<packaging>jar</packaging>

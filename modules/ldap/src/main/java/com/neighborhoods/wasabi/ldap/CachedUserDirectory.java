@@ -10,14 +10,14 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap;
+package com.neighborhoods.wasabi.ldap;
 
 import java.util.stream.Stream;
 
 import com.google.inject.ImplementedBy;
 import com.intuit.wasabi.userdirectory.UserDirectory;
-import com.nhds.wasabi.ldap.impl.DirectoryUser;
-import com.nhds.wasabi.ldap.impl.LdapUserDirectory;
+import com.neighborhoods.wasabi.ldap.impl.DirectoryUser;
+import com.neighborhoods.wasabi.ldap.impl.LdapUserDirectory;
 
 /**
  * The Interface CachedUserDirectory.

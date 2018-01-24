@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap;
+package com.neighborhoods.wasabi.ldap;
 
 import static com.google.inject.Scopes.SINGLETON;
 import static com.intuit.autumn.utils.PropertyFactory.create;
@@ -44,11 +44,11 @@ public class LdapModule extends AbstractModule {
     protected void configure() {
         LOGGER.debug("installing module: {}", LdapModule.class.getSimpleName());
         Properties properties = create(PROPERTY_NAME, LdapModule.class);
-        String ldapClassName = getProperty("ldap.delegate.class", properties, "com.nhds.wasabi.ldap.impl.LdapDelegate");
+        String ldapClassName = getProperty("ldap.delegate.class", properties, "com.neighborhoods.wasabi.ldap.impl.LdapDelegate");
 
         Properties userDirectoryProperties = create(UserDirectoryModule.PROPERTY_NAME, UserDirectoryModule.class);
         String directoryClassName = getProperty("user.lookup.class.name", userDirectoryProperties,
-                "com.nhds.wasabi.ldap.impl.LdapUserDirectory");
+                "com.neighborhoods.wasabi.ldap.impl.LdapUserDirectory");
         try {
             @SuppressWarnings("unchecked")
             Class<DirectoryDelegate> ldapImplClass = (Class<DirectoryDelegate>) forName(ldapClassName);

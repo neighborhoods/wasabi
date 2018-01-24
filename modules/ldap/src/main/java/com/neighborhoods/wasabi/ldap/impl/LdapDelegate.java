@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap.impl;
+package com.neighborhoods.wasabi.ldap.impl;
 
 import static com.intuit.autumn.utils.PropertyFactory.create;
 import static com.intuit.autumn.utils.PropertyFactory.getProperty;
@@ -43,8 +43,8 @@ import org.slf4j.Logger;
 import com.google.inject.Singleton;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.exceptions.AuthenticationException;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
-import com.nhds.wasabi.ldap.DirectoryDelegate;
+import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
+import com.neighborhoods.wasabi.ldap.DirectoryDelegate;
 
 /**
  * The Class LdapDelegate.
@@ -56,7 +56,7 @@ import com.nhds.wasabi.ldap.DirectoryDelegate;
 public class LdapDelegate implements DirectoryDelegate {
 
     /**
-     * Private Inner Class for managing LDAP configuration details.
+     * Private inner class for managing LDAP configuration details.
      */
     private class LdapConfig {
 

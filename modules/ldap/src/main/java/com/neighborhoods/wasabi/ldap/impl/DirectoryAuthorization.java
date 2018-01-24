@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap.impl;
+package com.neighborhoods.wasabi.ldap.impl;
 
 import static com.intuit.wasabi.authorizationobjects.Permission.SUPERADMIN;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -45,7 +45,7 @@ import com.intuit.wasabi.exceptions.AuthenticationException;
 import com.intuit.wasabi.experimentobjects.Application;
 import com.intuit.wasabi.repository.cassandra.accessor.ApplicationListAccessor;
 import com.intuit.wasabi.repository.cassandra.pojo.ApplicationList;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
+import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
 
 /**
  * The Class DirectoryAuthorization.
@@ -175,7 +175,7 @@ public class DirectoryAuthorization implements Authorization {
      *
      * @return list of all application names
      */
-    List<String> getAllApplicationNameFromApplicationList() {
+    List<String> getAllApplicationNamesFromApplicationList() {
         Result<ApplicationList> allAppNames = applicationListAccessor.getUniqueAppName();
         return StreamSupport
                 .stream(Spliterators.spliteratorUnknownSize(allAppNames.iterator(), Spliterator.ORDERED), false)
@@ -302,7 +302,7 @@ public class DirectoryAuthorization implements Authorization {
         DirectoryUser userInfo = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (userInfo != null) {
             // For directory services, roles have been collapsed so retrieve all applications
-            List<String> allAppNames = getAllApplicationNameFromApplicationList();
+            List<String> allAppNames = getAllApplicationNamesFromApplicationList();
             // Translate each application in the stream to the wrapper object using the user entity
             allAppNames.stream()
                     .map(app -> UserPermissions.newInstance(Application.Name.valueOf(app),
@@ -324,7 +324,7 @@ public class DirectoryAuthorization implements Authorization {
         DirectoryUser userInfo = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (userInfo != null) {
             // For directory services, roles have been collapsed so retrieve all applications
-            List<String> allAppNames = getAllApplicationNameFromApplicationList();
+            List<String> allAppNames = getAllApplicationNamesFromApplicationList();
             // Translate each application in the stream to the wrapper object using the user entity
             allAppNames.stream()
                     .forEach(app -> UserRole.newInstance(Application.Name.valueOf(app), Role.toRole(userInfo.getRole()))

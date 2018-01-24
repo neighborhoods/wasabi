@@ -6,7 +6,7 @@ This project is an extension to the [Wasabi](https://github.com/intuit/wasabi/) 
 
 To support new authentication mechanisms, this project adds support for a cached directory service and provides a default implementation for connecting and using an LDAP server as the sole source of both authentication and authorization details.
 
-Using a variety of configuration options, the project aims to handle your customization needs. By incorporating mix-in classes to divide responsibility and seperate concerns, the project aims to allow for easy extension to support new services in the future. 
+Using a variety of configuration options, the project aims to handle your customization needs. By incorporating mix-in classes to divide responsibility and separate concerns, the project aims to allow for easy extension to support new services in the future. 
 
 ### Features
 * **Customizable** - Wasabi LDAP takes all parameters via configuration parameters. This allows you to customize to your specific LDAP configuration.
@@ -14,12 +14,12 @@ Using a variety of configuration options, the project aims to handle your custom
 * **Simplified security with increased performance** - All security is managed via LDAP--simplifying your user management. Furthermore, using encrypted passwords/cookies and a cached user directory, this project builds and extends existing Wasabi classes and functionality.
 
 ## Installation
-### Option A: Deploy the compiled JAR as a dependancy
-Wasabi-LDAP is deployed in the Maven central repository. *TBD/WIP* -- Need to apply for `com.nhds` repository in Maven Central for hosting our public projects
+### Option A: Deploy the compiled JAR as a dependency
+Wasabi-LDAP is deployed in the Maven central repository. *TBD/WIP* -- Need to apply for `com.neighborhoods` repository in Maven Central for hosting our public projects
  1. Add the following to your main Wasabi `pom.xml` under the `<dependencies>` section:
 	  ```xml
 	<dependency>
-		<groupId>com.nhds</groupId>
+		<groupId>com.neighborhoods</groupId>
 		<artifactId>wasabi-ldap</artifactId>
 		<version>0.1.0</version>
 	</dependency>
@@ -30,19 +30,19 @@ Wasabi-LDAP is deployed in the Maven central repository. *TBD/WIP* -- Need to ap
  *See [Extending Wasabi LDAP](#extending-wasabi-ldap) section for guidance on this approach*
  
 ## Configuration 
-Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters are loaded via the following heirarchy (later options take precedence):
+Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters are loaded via the following hierarchy (later options take precedence):
  * Root `pom.xml` of the Wasabi project. Important Notes: 
       * You must include the `wasabi-ldap` module and build from source if you elect to use this method of property injection.
-      * All properties (even unusued/unchanged properties) must be specified in the `pom.xml`. Use an empty value to defer to the default.
+      * All properties (even unused/unchanged properties) must be specified in the `pom.xml`. Use an empty value to defer to the default.
  * Manually modified in the `ldap.properties` file included in the main JAR
  * Set as environment variables at runtime
  
 | Property              | Description   | Example Value  |
 | --------------------- |:-------------------------------------------------------------| :----------------:|
-| user.lookup.class.name| This is the core Wasabi UserDirectory implementor. To use LDAP, this must be set to a class that also implements the CachedDirectory interface | `com.nhds.wasabi.ldap.impl.LdapUserDirectory` |
-| authorization.class.name | This is the core Wasabi Authorization interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthorization` |
-| authentication.class.name | This is the core Wasabi Authentication interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.nhds.wasabi.ldap.impl.DirectoryAuthentication`  |
-| ldap.delegate.class | This is the DirectoryDelegate implementor. A default implementor for LDAP has been provided. | `com.nhds.wasabi.ldap.impl.LdapDelegate` |
+| user.lookup.class.name| This is the core Wasabi UserDirectory implementor. To use LDAP, this must be set to a class that also implements the CachedDirectory interface | `com.neighborhoods.wasabi.ldap.impl.LdapUserDirectory` |
+| authorization.class.name | This is the core Wasabi Authorization interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.neighborhoods.wasabi.ldap.impl.DirectoryAuthorization` |
+| authentication.class.name | This is the core Wasabi Authentication interface implementor. A default implementer that uses the CachedDirectory interface has been provided.      |   `com.neighborhoods.wasabi.ldap.impl.DirectoryAuthentication`  |
+| ldap.delegate.class | This is the DirectoryDelegate implementor. A default implementor for LDAP has been provided. | `com.neighborhoods.wasabi.ldap.impl.LdapDelegate` |
 | ldap.host | The host name for the LDAP server. Note: If using a LDAP server on the same host as the docker image, use the `docker.for.mac.localhost` reserved hostname. | `123.456.78.9` |
 | ldap.dn.base | The base distinguished name for all queries. | `dc=example,dc=com` |
 | ldap.dn.wasabi | The Wasabi distinguished name. Groups will be queried under this dn. | `cn=Wasabi,dc=example,dc=com` |
@@ -69,16 +69,16 @@ To clear the cache (e.g. if you are concerned about a user you recently removed 
 
 
 ## Extending Wasabi LDAP
-At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we chose to build and share this extension publically. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
+At [Neighborhoods.com](Neighborhoods.com), we are committed to utilizing the best open source solutions. We know the value of a good neighbor and the software community is no different. That is why we chose to build and share this extension publicly. Under a generous Apache2 license, we hope to inspire further contributions to Wasabi and our own extension. 
 
-Wasabi LDAP builds on the base interfaces of Wasabi. Below is a listing of key classes:
+Wasabi LDAP builds on the base interfaces of Wasabi. Below is an overview of key classes:
  ```java 
- package com.nhds.wasabi.ldap;
+ package com.neighborhoods.wasabi.ldap;
  
  public interface CachedUserDirectory extends UserDirectory {};
  public interface DirectoryDelegate {};
  
- package com.nhds.wasabi.ldap.impl;
+ package com.neighborhoods.wasabi.ldap.impl;
  
  public class DirectoryAuthentication implements Authentication {};
  public class DirectoryAuthorization implements Authorization {};
@@ -94,14 +94,14 @@ To build Wasabi and include the LDAP module:
 1. For any build with LDAP source files included, you *must* add all of the following properties in your root `pom.xml` within the `<properties>` parent tag. This is so the downstream property files are initialized properly. Be sure to have this section replace the existing `DefaultAuthentication` and `DefaultAuthorization` properties. For all LDAP configuration options, if you want to specify the values downstream or use the default value simply leave the tag values blank:
 	```xml
 	<!-- LDAP -->
-		<user.lookup.class.name>com.nhds.wasabi.ldap.impl.LdapUserDirectory
+		<user.lookup.class.name>com.neighborhoods.wasabi.ldap.impl.LdapUserDirectory
 		</user.lookup.class.name>
-		<authorization.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthorization
+		<authorization.class.name>com.neighborhoods.wasabi.ldap.impl.DirectoryAuthorization
 		</authorization.class.name>
-		<authentication.class.name>com.nhds.wasabi.ldap.impl.DirectoryAuthentication
+		<authentication.class.name>com.neighborhoods.wasabi.ldap.impl.DirectoryAuthentication
 		</authentication.class.name>
 		<!-- Dynamic delegate configuration only works if the LDAP module is actually installed via Guice -->
-		<ldap.delegate.class>com.nhds.wasabi.ldap.impl.LdapDelegate
+		<ldap.delegate.class>com.neighborhoods.wasabi.ldap.impl.LdapDelegate
 		</ldap.delegate.class>
 		<ldap.host>docker.for.mac.localhost</ldap.host>
 		<ldap.dn.base>dc=example,dc=com</ldap.dn.base>
@@ -122,10 +122,10 @@ To build Wasabi and include the LDAP module:
 		<ldap.person.last.attribute></ldap.person.last.attribute>
 	<!-- /LDAP -->
 	```
-1. Now that LDAP source files will be compiled and configured, they need to be included in the final JAR. Add the artifact as a dependancy to any module (recommended module is `main` since this is the last module built and should avoid circular dependancy references). Edit `modules/main/pom.xml` and add the following to the `<dependencies>` section:
+1. Now that LDAP source files will be compiled and configured, they need to be included in the final JAR. Add the artifact as a dependency to any module (recommended module is `main` since this is the last module built and should avoid circular dependency references). Edit `modules/main/pom.xml` and add the following to the `<dependencies>` section:
 	```xml
 	<dependency>
-	    <groupId>com.nhds</groupId>
+	    <groupId>com.neighborhoods</groupId>
 	    <artifactId>wasabi-ldap</artifactId>
 	    <version>0.1.0</version>
 	</dependency>
@@ -136,11 +136,11 @@ To build Wasabi and include the LDAP module:
 	```
 1. (*Optional*) If you need to change the default implementer for any of the delegate interfaces, you can modify the appropriate `@Implements` tag in the interface file or install the `LdapModule` via another core Wasabi module (`configure() {install(new LdapModule());}`) to have the `LdapModule` load delegates dynamically at run time via the configuration.
 
-Note: Wasabi-LDAP specifies the dependancy version of core Wasabi in its `pom.xml` as the last tested snapshot version of Wasabi that was compiled succesfully (e.g. `<version>1.0.20170418213834-SNAPSHOT</version>`). You may need to adjust the version dependancy if you are using a newer version of Wasabi. As long as the underlying `Authentication` and `Authorization` interface contracts do not change, Wasabi LDAP should be forward-compatible with all new versions.
+Note: Wasabi-LDAP specifies the dependency version of core Wasabi in its `pom.xml` as the last tested snapshot version of Wasabi that was compiled successfully (e.g. `<version>1.0.20170418213834-SNAPSHOT</version>`). You may need to adjust the version dependency if you are using a newer version of Wasabi. As long as the underlying `Authentication` and `Authorization` interface contracts do not change, Wasabi LDAP should be forward-compatible with all new versions.
 
 # References
 ## Java 8 Features
 Both Wasabi and Wasabi-LDAP make use of Java8 features you may not typically encounter in other projects. Below are a few nuances to consider when reviewing the code or if you choose to extend the project.
  * [try{} with resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) - All LDAP related calls are wrapped in try with resource blocks. This handles exceptional behavior differently than typical `try` blocks and automatically opens and closes resources.
- * [Stream support](http://www.oracle.com/technetwork/articles/java/ma14-java-se-8-streams-2177646.html) - All collections are traversed and filtered using stream support to increase effeciencies and properly handle larger data sets. (No more iterators!)
+ * [Stream support](http://www.oracle.com/technetwork/articles/java/ma14-java-se-8-streams-2177646.html) - All collections are traversed and filtered using stream support to increase efficiencies and properly handle larger data sets. (No more iterators!)
  * [Concurrency Classes](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentHashMap.html) - Generally thread safe operations are handled transparently via built in concurrent classes.

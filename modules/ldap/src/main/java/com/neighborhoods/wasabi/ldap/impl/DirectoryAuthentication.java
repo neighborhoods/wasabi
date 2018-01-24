@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap.impl;
+package com.neighborhoods.wasabi.ldap.impl;
 
 import static com.google.common.base.Optional.fromNullable;
 import static com.intuit.wasabi.authenticationobjects.LoginToken.withAccessToken;
@@ -26,7 +26,7 @@ import com.intuit.wasabi.authentication.Authentication;
 import com.intuit.wasabi.authenticationobjects.LoginToken;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.exceptions.AuthenticationException;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
+import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
 
 /**
  * The Class DirectoryAuthentication.
@@ -78,11 +78,10 @@ public class DirectoryAuthentication implements Authentication {
     public UserInfo getUserExists(final String userEmail) {
         LOGGER.debug("Authentication token received as: {}", userEmail);
 
-        if (!isBlank(userEmail)) {
-            return userDirectory.lookupUserByEmail(userEmail);
-        } else {
+        if (isBlank(userEmail)) {
             throw new AuthenticationException("user does not exists in system");
         }
+        return userDirectory.lookupUserByEmail(userEmail);
     }
 
     /**
@@ -98,13 +97,12 @@ public class DirectoryAuthentication implements Authentication {
 
         DirectoryUserCredential credential = parseUsernamePassword(fromNullable(authHeader));
         DirectoryUser user = userDirectory.authenticate(credential.username, credential.password);
-        if (user != null) {
-            DirectoryUserCredential encodedCredentials = new DirectoryUserCredential(user.getUsername().getUsername(),
-                    user.getPassword());
-            return withAccessToken(encodedCredentials.toBase64Encode()).withTokenType(BASIC).build();
-        } else {
+        if (user == null) {
             throw new AuthenticationException("Authentication login failed. Invalid Login Credential");
-        }
+        } 
+        DirectoryUserCredential encodedCredentials = new DirectoryUserCredential(user.getUsername().getUsername(),
+                user.getPassword());
+        return withAccessToken(encodedCredentials.toBase64Encode()).withTokenType(BASIC).build();
     }
 
     /**
@@ -139,7 +137,7 @@ public class DirectoryAuthentication implements Authentication {
         final String encodedUserPassword = authHeader.get().substring(authHeader.get().lastIndexOf(SPACE));
         String usernameAndPassword;
 
-        LOGGER.trace("Base64 decoded username and password is: {}", encodedUserPassword);
+        LOGGER.trace("Base64 encoded username and password is: {}", encodedUserPassword);
 
         try {
             usernameAndPassword = new String(decodeBase64(encodedUserPassword.getBytes()));
@@ -150,7 +148,7 @@ public class DirectoryAuthentication implements Authentication {
         String[] fields = usernameAndPassword.split(SEMICOLON);
 
         if (fields.length > 2) {
-            throw new AuthenticationException("More than one username and password provided, or one contains ':'");
+            throw new AuthenticationException("More than one username and password provided, or one contains "+SEMICOLON);
         } else if (fields.length < 2) {
             throw new AuthenticationException("Username or password are empty.");
         }
@@ -177,8 +175,7 @@ public class DirectoryAuthentication implements Authentication {
 
         if (userDirectory.isDirectoryTokenValid(credential.username, credential.password)) {
             return withAccessToken(credential.toBase64Encode()).withTokenType(BASIC).build();
-        } else {
-            throw new AuthenticationException("Authentication Token is not valid");
         }
+        throw new AuthenticationException("Authentication token is not valid");
     }
 }

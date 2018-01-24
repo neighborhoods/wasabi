@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.nhds.wasabi.ldap.impl;
+package com.neighborhoods.wasabi.ldap.impl;
 
 import java.util.Date;
 import java.util.Map;
@@ -23,8 +23,8 @@ import com.google.inject.Singleton;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
 import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
 import com.intuit.wasabi.exceptions.AuthenticationException;
-import com.nhds.wasabi.ldap.CachedUserDirectory;
-import com.nhds.wasabi.ldap.DirectoryDelegate;
+import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
+import com.neighborhoods.wasabi.ldap.DirectoryDelegate;
 
 import static java.text.MessageFormat.format;
 
@@ -33,6 +33,9 @@ import static java.text.MessageFormat.format;
  * 
  * Concrete implementation of the CachedUserDirectory. This class will store user credentials for a given validity
  * period. It will forward all calls to it's delegate for non-cached operations.
+ * 
+ * Important Note: This class is implemented as a singleton method via Guice's injection model. The below tag is
+ * critical to it's status as a singleton. Core Wasabi's DefaultUserDirectory class is missing this
  */
 @Singleton
 public class LdapUserDirectory implements CachedUserDirectory {
