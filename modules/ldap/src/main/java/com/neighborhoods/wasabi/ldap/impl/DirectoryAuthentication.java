@@ -70,8 +70,8 @@ public class DirectoryAuthentication implements Authentication {
     /**
      * Check whether a user exists
      *
-     * @param userEmail the user mail
-     * @return the UserInfo of the "admin" user
+     * @param userEmail the user's email
+     * @return the UserInfo object of the requested user
      * @throws AuthenticationException if the user does not exist
      */
     @Override
@@ -79,13 +79,13 @@ public class DirectoryAuthentication implements Authentication {
         LOGGER.debug("Authentication token received as: {}", userEmail);
 
         if (isBlank(userEmail)) {
-            throw new AuthenticationException("user does not exists in system");
+            throw new AuthenticationException("userEmail is blank");
         }
         return userDirectory.lookupUserByEmail(userEmail);
     }
 
     /**
-     * Attempts to return the LoginToken of the default user as if it was obtained via HTTP Basic authentication.
+     * Attempts to return the LoginToken of the user as if it was obtained via HTTP Basic authentication.
      *
      * @param authHeader the authentication header
      * @return a login token for this user (always)
@@ -93,13 +93,12 @@ public class DirectoryAuthentication implements Authentication {
      */
     @Override
     public LoginToken logIn(final String authHeader) {
-        LOGGER.debug("Authentication header received as: {}", authHeader);
-
         DirectoryUserCredential credential = parseUsernamePassword(fromNullable(authHeader));
         DirectoryUser user = userDirectory.authenticate(credential.username, credential.password);
         if (user == null) {
             throw new AuthenticationException("Authentication login failed. Invalid Login Credential");
-        } 
+        }
+        // Get the username from the username object and the encoded password for persistence in the access token
         DirectoryUserCredential encodedCredentials = new DirectoryUserCredential(user.getUsername().getUsername(),
                 user.getPassword());
         return withAccessToken(encodedCredentials.toBase64Encode()).withTokenType(BASIC).build();
@@ -125,7 +124,7 @@ public class DirectoryAuthentication implements Authentication {
      * @return DirectoryUserCredential for the authHeader
      * @throws AuthenticationException for invalid headers
      */
-    protected DirectoryUserCredential parseUsernamePassword(final Optional<String> authHeader) {
+    protected static DirectoryUserCredential parseUsernamePassword(final Optional<String> authHeader) {
         if (!authHeader.isPresent()) {
             throw new AuthenticationException("Null Authentication Header is not supported");
         }
@@ -137,19 +136,17 @@ public class DirectoryAuthentication implements Authentication {
         final String encodedUserPassword = authHeader.get().substring(authHeader.get().lastIndexOf(SPACE));
         String usernameAndPassword;
 
-        LOGGER.trace("Base64 encoded username and password is: {}", encodedUserPassword);
-
         try {
             usernameAndPassword = new String(decodeBase64(encodedUserPassword.getBytes()));
         } catch (Exception e) {
             throw new AuthenticationException("error parsing username and password", e);
         }
 
-        String[] fields = usernameAndPassword.split(SEMICOLON);
+        // Core Wasabi doesn't allow : in both usernames and passwords. This will allow passwords to contain any number
+        // of : but usernames will remain an issue
+        String[] fields = usernameAndPassword.split(SEMICOLON, 2);
 
-        if (fields.length > 2) {
-            throw new AuthenticationException("More than one username and password provided, or one contains "+SEMICOLON);
-        } else if (fields.length < 2) {
+        if (fields.length < 2) {
             throw new AuthenticationException("Username or password are empty.");
         }
 

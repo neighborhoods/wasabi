@@ -42,7 +42,7 @@ public interface CachedUserDirectory extends UserDirectory {
      * @param The username of the user to remove
      * @return The result of the remove action
      */
-    public DirectoryUser removeUserFromCache(String login);
+    public DirectoryUser removeUserFromCache(String username);
 
     /**
      * Authenticate (e.g. during initial login) a given user
@@ -51,7 +51,7 @@ public interface CachedUserDirectory extends UserDirectory {
      * @param password - The password to authenticate
      * @return The directory user if successful
      */
-    public DirectoryUser authenticate(String login, String password);
+    public DirectoryUser authenticate(String username, String password);
 
     /**
      * Get a stream of all users
@@ -67,7 +67,7 @@ public interface CachedUserDirectory extends UserDirectory {
      * @param encryptedPassword The password to validate
      * @return true, if a directory token is valid
      */
-    public boolean isDirectoryTokenValid(String login, String token);
+    public boolean isDirectoryTokenValid(String username, String token);
 
     /**
      * Find a user by username

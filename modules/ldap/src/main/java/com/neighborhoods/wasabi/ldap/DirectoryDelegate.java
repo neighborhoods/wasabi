@@ -33,7 +33,8 @@ public interface DirectoryDelegate {
      * @param username - The target user
      * @param password - The target user password
      * @return directory user object
-     * @throws AuthenticationException For all failures (e.g. unable to connect to the directory service)
+     * @throws AuthenticationException For all failures (e.g. user entered incorrect password or even when unable to
+     *             connect to the directory service)
      */
     public DirectoryUser authenticate(CachedUserDirectory userDirectory, String username, String password)
             throws AuthenticationException;

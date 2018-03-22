@@ -44,7 +44,8 @@ public class LdapModule extends AbstractModule {
     protected void configure() {
         LOGGER.debug("installing module: {}", LdapModule.class.getSimpleName());
         Properties properties = create(PROPERTY_NAME, LdapModule.class);
-        String ldapClassName = getProperty("ldap.delegate.class", properties, "com.neighborhoods.wasabi.ldap.impl.LdapDelegate");
+        String ldapClassName = getProperty("ldap.delegate.class", properties,
+                "com.neighborhoods.wasabi.ldap.impl.LdapDelegate");
 
         Properties userDirectoryProperties = create(UserDirectoryModule.PROPERTY_NAME, UserDirectoryModule.class);
         String directoryClassName = getProperty("user.lookup.class.name", userDirectoryProperties,

@@ -53,6 +53,7 @@ Wasabi LDAP follows the same property usage pattern as core Wasabi. Parameters a
 | ldap.login.attribute | The attribute name to access the login value. | `uid` |
 | ldap.member.attribute | The attribute name to access the member value(s) for Wasabi groups. | `member` |
 | ldap.role.attribute | The attribute name to access the role group for a user. | `cn` |
+| ldap.bcrypt.rounds | The number of rounds bCrypt should be applied to encrypt a user authorization token | `7` |
 | ldap.group.admin | The group name for the Admin role (read/write/delete for all applications) | `Admin` |
 | ldap.group.superadmin | The group name for the Admin role (read/write/delete for all applications, clear cache) | `SuperAdmin` |
 | ldap.group.reader | The group name for the Reader role (read for all applications) | `Reader` |
@@ -108,6 +109,7 @@ To build Wasabi and include the LDAP module:
 		<ldap.dn.wasabi>cn=Wasabi,dc=example,dc=com</ldap.dn.wasabi>
 		<ldap.dn.info>cn=info,dc=example,dc=com</ldap.dn.info>
 		<ldap.dn.info.password>examplePassword</ldap.dn.info.password>
+		<ldap.bcrypt.rounds></ldap.bcrypt.rounds>
 		<ldap.port></ldap.port>
 		<ldap.secure></ldap.secure>
 		<ldap.login.attribute></ldap.login.attribute>

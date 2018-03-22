@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import com.datastax.driver.mapping.Result;
 import com.google.common.base.Optional;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
+import com.intuit.wasabi.authenticationobjects.UserInfo.Username;
 import com.intuit.wasabi.authorization.Authorization;
 import com.intuit.wasabi.authorizationobjects.Permission;
 import com.intuit.wasabi.authorizationobjects.Role;
@@ -53,8 +54,8 @@ import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
  * Primary purpose is to handle authorization requests for actions (e.g. read/write). This class delegates all role
  * related retrieval operations to the CachedUserDirectory.
  * 
- * Note that due to core Wasabi UI limitations, application/experiment based authorization has been collapsed. Meaning a
- * Reader will have access to all applications. Unsupported operations could not be removed from the UI so an
+ * Note that due to core Wasabi UI limitations, application/experiment based authorization have been collapsed. Meaning
+ * a Reader will have access to all applications. Unsupported operations could not be removed from the UI so an
  * appropriate exception is thrown and displayed to users in the event they attempt to modify ACLs or perform other role
  * based assignments.
  */
@@ -137,7 +138,7 @@ public class DirectoryAuthorization implements Authorization {
     public void checkSuperAdmin(UserInfo.Username userID) {
         DirectoryUser user = this.userDirectory.lookupDirectoryUser(userID.getUsername());
         if (!Role.toRole(user.getRole()).equals(Role.SUPERADMIN)) {
-            throw new AuthenticationException("error, user " + userID + " is not a superadmin");
+            throw new AuthenticationException("user " + userID + " is not a superadmin");
         }
     }
 
@@ -155,13 +156,13 @@ public class DirectoryAuthorization implements Authorization {
         UserPermissions userPermissions = getUserPermissions(userID, applicationName);
         // check that the user is permitted to perform the action
         if (userPermissions == null || !userPermissions.getPermissions().contains(permission)) {
-            throw new AuthenticationException("error, user " + userID + " not authorized to " + permission.toString()
+            throw new AuthenticationException("user " + userID + " is not authorized to " + permission.toString()
                     + " on application " + applicationName.toString());
         }
     }
 
     /**
-     * Delete a user role
+     * Delete a user role. This is a NO-OP via Wasabi. All user management must be performed directly within LDAP.
      * 
      * @throws UnsupportedOperationException for all calls to this method
      */
@@ -171,7 +172,7 @@ public class DirectoryAuthorization implements Authorization {
     }
 
     /**
-     * Gets the all application name from application list.
+     * Gets all application names from the application list.
      *
      * @return list of all application names
      */
@@ -183,16 +184,16 @@ public class DirectoryAuthorization implements Authorization {
     }
 
     /**
-     * Retrieve all users of the application. Note that all application based permissions has been collapsed.
+     * Retrieve all users of the application. Note that all application based permissions have been collapsed.
      * 
-     * @param the application name
+     * @param applicationName the application name
      * @return collection of user/role pairings for the application
      */
     @Override
     public UserRoleList getApplicationUsers(Application.Name applicationName) {
         UserRoleList userRoleList = new UserRoleList();
         this.userDirectory.getAllUsers().forEach(user -> {
-            // Tranlate the role to the wrapper object
+            // Translate the role to the wrapper object
             Role role = Role.toRole(user.getRole());
             // Build a UserRole instance based on the directory result
             userRoleList.addRole(UserRole.newInstance(applicationName, role).withUserID(user.getUsername())
@@ -291,7 +292,7 @@ public class DirectoryAuthorization implements Authorization {
     }
 
     /**
-     * Retieve the permission list object for a given user
+     * Retrieve the permission list object for a given user
      * 
      * @param userID the username of the target user
      * @return container of permissions for the user
@@ -342,37 +343,8 @@ public class DirectoryAuthorization implements Authorization {
      * @throws AuthenticationException for bad auth headers
      */
     private UserInfo.Username parseUsername(Optional<String> authHeader) {
-        if (!authHeader.isPresent()) {
-            throw new AuthenticationException("Null Authentication Header is not supported");
-        }
-
-        if (!authHeader.or(SPACE).contains(BASIC)) {
-            throw new AuthenticationException("Only Basic Authentication is supported");
-        }
-
-        final String encodedUserPassword = authHeader.get().substring(authHeader.get().lastIndexOf(SPACE));
-        LOGGER.trace("Base64 decoded username and password is: {}", encodedUserPassword);
-        String usernameAndPassword;
-        try {
-            usernameAndPassword = new String(Base64.decodeBase64(encodedUserPassword.getBytes()));
-        } catch (Exception e) {
-            throw new AuthenticationException("error parsing username and password", e);
-        }
-
-        // Split username and password tokens
-        String[] fields = usernameAndPassword.split(COLON);
-
-        if (fields.length > 2) {
-            throw new AuthenticationException("More than one username and password provided, or one contains ':'");
-        } else if (fields.length < 2) {
-            throw new AuthenticationException("Username or password are empty.");
-        }
-
-        if (StringUtils.isBlank(fields[0]) || StringUtils.isBlank(fields[1])) {
-            throw new AuthenticationException("Username or password are empty.");
-        }
-
-        return UserInfo.Username.valueOf(fields[0]);
+        DirectoryUserCredential credential = DirectoryAuthentication.parseUsernamePassword(authHeader);
+        return UserInfo.from(Username.valueOf(credential.username)).build().getUsername();
     }
 
     /**

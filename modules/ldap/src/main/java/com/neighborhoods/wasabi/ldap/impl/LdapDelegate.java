@@ -83,6 +83,9 @@ public class LdapDelegate implements DirectoryDelegate {
 
         /** The ldap port. */
         private int ldapPort;
+        
+        /** The number of bCrypt rounds to apply to encrypted passwords. */
+        private int bCryptRounds;
 
         /** Whether to secure connection. */
         private boolean secureConnection;
@@ -151,6 +154,7 @@ public class LdapDelegate implements DirectoryDelegate {
             this.setPersonEmailAttribute(getProperty("ldap.person.email.attribute", properties, "mail"));
             this.setPersonFirstNameAttribute(getProperty("ldap.person.first.attribute", properties, "givenname"));
             this.setPersonLastNameAttribute(getProperty("ldap.person.last.attribute", properties, "sn"));
+            this.setBCryptRounds(Integer.parseInt(getProperty("ldap.bcrypt.rounds", properties, "7")));
         }
 
         /**
@@ -504,10 +508,15 @@ public class LdapDelegate implements DirectoryDelegate {
             }
             return LdapConfig.ROLE_NONE;
         }
-    }
 
-    /** The Constant LDAP_BCRYPT_ROUNDS. How many rounds of BCRYPT should be used when encrypting a password */
-    private static final int LDAP_BCRYPT_ROUNDS = 7;
+        public int getBCryptRounds() {
+            return bCryptRounds;
+        }
+
+        public void setBCryptRounds(int bCryptRounds) {
+            this.bCryptRounds = bCryptRounds;
+        }
+    }
 
     /** The cached search request for finding users. */
     private static SearchRequest userCacheSearchRequest;
@@ -579,23 +588,15 @@ public class LdapDelegate implements DirectoryDelegate {
         } catch (LdapAuthenticationException authException) {
             throw new AuthenticationException("LDAP Authentication failed for " + username);
         } catch (LdapException e) {
-            LOGGER.debug("LDAP ERROR: Authentication failed with LdapException {}",e);
+            LOGGER.debug("LDAP ERROR: Authentication failed with LdapException {}", e);
             throw new AuthenticationException("Error connecting to LDAP");
         } catch (IOException e) {
-            LOGGER.debug("LDAP ERROR: Refresh cache search query failed with IOException: {} Verify your LDAP configuration", e);
+            LOGGER.debug(
+                    "LDAP ERROR: Refresh cache search query failed with IOException: {} Verify your LDAP configuration",
+                    e);
             throw new AuthenticationException("IOException exception connecting to LDAP");
         }
         return null;
-    }
-
-    /**
-     * Encrypt a clear text password
-     *
-     * @param password the clear text password
-     * @return the string representation of the encrypted password
-     */
-    private String encryptPassword(String password) {
-        return BCrypt.hashPw(password, BCrypt.gensalt(LDAP_BCRYPT_ROUNDS));
     }
 
     /**
@@ -642,7 +643,7 @@ public class LdapDelegate implements DirectoryDelegate {
         try (LdapConnection connection = getLdapInfoConnection()) {
             if (connection.isConnected() && connection.isAuthenticated()) {
                 String role = null;
-                // Since we have username, search the Wasabi dn 
+                // Since we have username, search the Wasabi dn
                 try (EntryCursor cursor = connection.search(this.config.getWasabiDN(),
                         "(" + this.config.getRoleSearchAttribute() + username + ")", SearchScope.ONELEVEL)) {
                     for (Entry entry : cursor) {
@@ -677,6 +678,110 @@ public class LdapDelegate implements DirectoryDelegate {
             throw new AuthenticationException("Error connecting to LDAP.");
         }
         return null;
+    }
+
+    /**
+     * Validate a directory token
+     * 
+     * @param userDirectory - the calling user directory
+     * @param username - The username to validate
+     * @param encodedPassword - The encrypted password to validate
+     * @return Always returns whether the token is valid or not
+     */
+    @Override
+    public boolean isDirectoryTokenValid(CachedUserDirectory userDirectory, String username, String encodedPassword) {
+        try {
+            DirectoryUser userInfo = userDirectory.lookupDirectoryUser(username);
+            // It is possible for the password to be null if it was retrieved outside of the login flow
+            if (userInfo != null && userInfo.getPassword() != null) {
+                // Encoded passwords are only in the cache
+                return userInfo.getPassword().equals(encodedPassword);
+            }
+        } catch (AuthenticationException ae) {
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * Populates the user cache with all Wasabi users
+     * 
+     * @param The calling CachedUserDirectory instance
+     * @throws AuthenticationException If unable to connect to ldap or bad LDAP queries
+     */
+    @Override
+    public void populateUserCache(CachedUserDirectory userDirectory) throws AuthenticationException {
+        try (LdapConnection connection = getLdapInfoConnection()) {
+            if (connection.isConnected() && connection.isAuthenticated()) {
+                // Search the Wasabi DN for all objects
+                try (SearchCursor searchCursor = connection.search(getUserCacheSearchRequest())) {
+                    while (searchCursor.next()) {
+                        Response response = searchCursor.get();
+                        // process the SearchResultEntry
+                        if (response instanceof SearchResultEntry) {
+                            Entry resultEntry = ((SearchResultEntry) response).getEntry();
+                            iterateGroupMembersForCache(connection, userDirectory, resultEntry);
+                        }
+                    }
+                }
+            }
+        } catch (CursorException e) {
+            LOGGER.error(
+                    "LDAP FATAL ERROR: Refresh cache search query failed with CursorException: Verify your LDAP configuration",
+                    e);
+            throw new AuthenticationException("LDAP Search Query Failed: " + e.getMessage());
+        } catch (LdapAuthenticationException authException) {
+            LOGGER.error(
+                    "LDAP FATAL ERROR: Unable to refresh cache. Check your ldap.dn.info properties and ensure appropriate access. All LDAP functionality will fail. {}",
+                    authException);
+            ;
+            throw new AuthenticationException("LDAP Authentication Failed: " + authException.getMessage());
+        } catch (LdapException e) {
+            LOGGER.error(
+                    "LDAP FATAL ERROR: Refresh cache search query failed with LdapException: Verify your LDAP configuration",
+                    e);
+            throw new AuthenticationException("Error connecting to LDAP: " + e.getMessage());
+        } catch (IOException e) {
+            LOGGER.error(
+                    "LDAP FATAL ERROR: Refresh cache search query failed with IOException: Verify your LDAP configuration",
+                    e);
+            throw new AuthenticationException("IOException exception connecting to LDAP: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Encrypt a clear text password
+     *
+     * @param password the clear text password
+     * @return the string representation of the encrypted password
+     */
+    private String encryptPassword(String password) {
+        return BCrypt.hashPw(password, BCrypt.gensalt(this.config.getBCryptRounds()));
+    }
+
+    /**
+     * Utility function to cache resulting user of group membership query
+     * 
+     * @param connection Open connection to the LDAP server (for reuse)
+     * @param userDirectory The cached user directory to add the user to
+     * @param role Previously retrieved role (based on group membership)
+     * @param userDn The user's DN
+     * @throws LdapException For any LDAP failures
+     * @throws IOException For any cache storage related failures
+     */
+    protected void addDirectoryUserToCache(LdapConnection connection, CachedUserDirectory userDirectory, String role,
+            String userDn) throws LdapException, IOException {
+        // Build a cursor to retrieve meta user details
+        try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
+                "(" + this.config.getLoginEntity() + "=" + userDn + ")", SearchScope.ONELEVEL)) {
+            DirectoryUser user = getDirectoryUserViaCursor(cursor);
+            // Set the role for the user based on the current group
+            if (user != null) {
+                user.setRole(role);
+                // Cache the result
+                userDirectory.addUserToCache(user);
+            }
+        }
     }
 
     /**
@@ -755,7 +860,8 @@ public class LdapDelegate implements DirectoryDelegate {
                 searchRequest.setScope(SearchScope.SUBTREE);
                 searchRequest.addAttributes(this.config.getRoleAttribute());
                 searchRequest.addAttributes(this.config.getMembershipAttribute());
-                searchRequest.setTimeLimit(0);
+                // Max of 5 minutes (in seconds)
+                searchRequest.setTimeLimit(60 * 5);
                 searchRequest.setBase(new Dn(this.config.getWasabiDN()));
                 searchRequest.setFilter("(objectclass=*)");
                 userCacheSearchRequest = searchRequest;
@@ -765,93 +871,35 @@ public class LdapDelegate implements DirectoryDelegate {
     }
 
     /**
-     * Validate a directory token
+     * Utility method for iterating a group result for each member
      * 
-     * @param userDirectory - the calling user directory
-     * @param username - The username to validate
-     * @param encodedPassword - The encrypted password to validate
-     * @return Always returns whether the token is valid or not
+     * @param connection Open connection to the LDAP server (for reuse)
+     * @param userDirectory The cached user directory to add the user to
+     * @param resultEntry The LDAP result cursor for the group
+     * @throws LdapException For any LDAP failures
+     * @throws IOException For any cache storage related failures
      */
-    @Override
-    public boolean isDirectoryTokenValid(CachedUserDirectory userDirectory, String username, String encodedPassword) {
-        try {
-            DirectoryUser userInfo = userDirectory.lookupDirectoryUser(username);
-            // It is possible for the password to be null if it was retrieved outside of the login flow
-            if (userInfo != null && userInfo.getPassword() != null) {
-                // Encoded passwords are only in the cache
-                return userInfo.getPassword().equals(encodedPassword);
-            }
-        } catch (AuthenticationException ae) {
-            return false;
+    protected void iterateGroupMembersForCache(LdapConnection connection, CachedUserDirectory userDirectory,
+            Entry resultEntry) throws LdapException, IOException {
+        Attribute group = resultEntry.get(this.config.getRoleAttribute());
+        // Group determines role
+        if (group == null || LdapConfig.ROLE_NONE.equals(this.config.translateRole(group.getString()))) {
+            // It is possible there are non-Role related groups in the same Wasabi DN - this prevents
+            // unnecessary processing of these groups or class objects
+            return;
         }
-        return false;
-    }
-
-    /**
-     * Populates the user cache with all Wasabi users
-     * 
-     * @param The calling CachedUserDirectory instance
-     * @throws AuthenticationException If unable to connect to ldap or bad LDAP queries
-     */
-    @Override
-    public void populateUserCache(CachedUserDirectory userDirectory) throws AuthenticationException {
-        try (LdapConnection connection = getLdapInfoConnection()) {
-            if (connection.isConnected() && connection.isAuthenticated()) {
-                // Search the Wasabi DN for all objects
-                try (SearchCursor searchCursor = connection.search(getUserCacheSearchRequest())) {
-                    while (searchCursor.next()) {
-                        Response response = searchCursor.get();
-                        // process the SearchResultEntry
-                        if (response instanceof SearchResultEntry) {
-                            Entry resultEntry = ((SearchResultEntry) response).getEntry();
-                            Attribute group = resultEntry.get(this.config.getRoleAttribute());
-                            // Group determines role
-                            if (group == null
-                                    || LdapConfig.ROLE_NONE.equals(this.config.translateRole(group.getString()))) {
-                                // It is possible there are non-Role related groups in the same Wasabi DN - this prevents
-                                // unnecessary processing of these groups or class objects
-                                continue;
-                            }
-                            // All members of this group have the same role, store the Wasabi role for reuse in user building
-                            String role = this.config.translateRole(group.getString());
-                            // Obtain an iterator of members
-                            Attribute memberAttribute = resultEntry.get(this.config.getMembershipAttribute());
-                            Iterator<Value<?>> members = memberAttribute.iterator();
-                            while (members.hasNext()) {
-                                String member = members.next().getString();
-                                // Membership is generally uid=username, remove the first part to get only the username
-                                if (member.contains("=")) {
-                                    member = member.substring(member.indexOf("=") + 1);
-                                }
-                                // Build a cursor to retrieve meta user details
-                                try (EntryCursor cursor = connection.search(this.config.getBaseDN(),
-                                        "(" + this.config.getLoginEntity() + "=" + member + ")",
-                                        SearchScope.ONELEVEL)) {
-                                    DirectoryUser user = getDirectoryUserViaCursor(cursor);
-                                    // Set the role for the user based on the current group
-                                    if (user != null) {
-                                        user.setRole(role);
-                                        // Cache the result
-                                        userDirectory.addUserToCache(user);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        // All members of this group have the same role, store the Wasabi role for reuse in user building
+        String role = this.config.translateRole(group.getString());
+        // Obtain an iterator of members
+        Attribute memberAttribute = resultEntry.get(this.config.getMembershipAttribute());
+        Iterator<Value<?>> members = memberAttribute.iterator();
+        while (members.hasNext()) {
+            String member = members.next().getString();
+            // Membership is generally uid=username, remove the first part to get only the username
+            if (member.contains("=")) {
+                member = member.substring(member.indexOf("=") + 1);
             }
-        } catch (CursorException e) {
-            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with CursorException: {} Verify your LDAP configuration",e);
-            throw new AuthenticationException("LDAP Search Query Failed: " + e.getMessage());
-        } catch (LdapAuthenticationException authException) {
-            LOGGER.error("LDAP FATAL ERROR: Unable to refresh cache. Check your ldap.dn.info properties and ensure appropriate access. All LDAP functionality will fail. {}",authException);;
-            throw new AuthenticationException("LDAP Authentication Failed: " + authException.getMessage());
-        } catch (LdapException e) {
-            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with LdapException: {} Verify your LDAP configuration",e);
-            throw new AuthenticationException("Error connecting to LDAP: " + e.getMessage());
-        } catch (IOException e) {
-            LOGGER.error("LDAP FATAL ERROR: Refresh cache search query failed with IOException: {} Verify your LDAP configuration",e);
-            throw new AuthenticationException("IOException exception connecting to LDAP: " + e.getMessage());
+            addDirectoryUserToCache(connection, userDirectory, role, member);
         }
     }
 }

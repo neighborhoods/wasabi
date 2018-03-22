@@ -42,7 +42,6 @@ public class DirectoryUser {
      * @param userInfo the user info base
      */
     public DirectoryUser(UserInfo userInfo) {
-        super();
         this.userInfo = userInfo;
         Date now = new Date();
         this.cacheTimestamp = now.getTime();
@@ -55,7 +54,6 @@ public class DirectoryUser {
      * @param role the role
      */
     public DirectoryUser(UserInfo userInfo, String role) {
-        super();
         this.userInfo = userInfo;
         this.role = role;
         Date now = new Date();
@@ -91,7 +89,7 @@ public class DirectoryUser {
      * @return the cache timestamp
      */
     public long getCacheTimestamp() {
-        return cacheTimestamp;
+        return this.cacheTimestamp;
     }
 
     /**
