@@ -48,7 +48,7 @@ public class LdapUserDirectory implements CachedUserDirectory {
 
     /** The Constant CACHE_EXPIRY_PERIOD_MINUTES. When the cache should expire. */
     protected static final int CACHE_EXPIRY_PERIOD_MINUTES = 90;
-    
+
     /** The Constant LOGGER. */
     private static final Logger LOGGER = getLogger(LdapUserDirectory.class);
 
@@ -78,10 +78,13 @@ public class LdapUserDirectory implements CachedUserDirectory {
     @Inject
     public LdapUserDirectory(DirectoryDelegate delegate) {
         this.delegate = delegate;
+        /*
+         * NOTICE: It is very important during construct to catch all LDAP exceptions. Otherwise the DI will fail
+         * completely and the application will NOT start at all
+         */
         try {
             refreshCache();
-        }
-        catch(AuthenticationException authException) {
+        } catch (AuthenticationException authException) {
             LOGGER.error("LDAP ERROR: Failed to initialize user cache", authException);
         }
     }
