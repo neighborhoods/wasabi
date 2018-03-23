@@ -18,6 +18,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.intuit.wasabi.authenticationobjects.UserInfo;
@@ -27,6 +29,7 @@ import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
 import com.neighborhoods.wasabi.ldap.DirectoryDelegate;
 
 import static java.text.MessageFormat.format;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * The Class LdapUserDirectory.
@@ -45,6 +48,9 @@ public class LdapUserDirectory implements CachedUserDirectory {
 
     /** The Constant CACHE_EXPIRY_PERIOD_MINUTES. When the cache should expire. */
     protected static final int CACHE_EXPIRY_PERIOD_MINUTES = 90;
+    
+    /** The Constant LOGGER. */
+    private static final Logger LOGGER = getLogger(LdapUserDirectory.class);
 
     /**
      * Convenience function to convert a map to stream.
@@ -72,7 +78,12 @@ public class LdapUserDirectory implements CachedUserDirectory {
     @Inject
     public LdapUserDirectory(DirectoryDelegate delegate) {
         this.delegate = delegate;
-        refreshCache();
+        try {
+            refreshCache();
+        }
+        catch(AuthenticationException authException) {
+            LOGGER.error("LDAP ERROR: Failed to initialize user cache", authException);
+        }
     }
 
     /**
