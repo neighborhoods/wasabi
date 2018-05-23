@@ -186,6 +186,8 @@ bootstrap() {
 }
 
 build() {
+  ./bin/java_version_check.sh
+  rc=$?; if [[ $rc != 0 ]]; then exit $rc; fi
   ./bin/build.sh -b ${1:-false} -t ${2:-false} -p ${3:-development}
 }
 
