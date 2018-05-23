@@ -16,6 +16,7 @@ import static com.intuit.wasabi.authorizationobjects.Permission.SUPERADMIN;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,7 @@ import com.neighborhoods.wasabi.ldap.CachedUserDirectory;
  * related retrieval operations to the CachedUserDirectory.
  * 
  * Note that due to core Wasabi UI limitations, application/experiment based authorization have been collapsed. Meaning
- * a Reader will have access to all applications. Unsupported operations could not be removed from the UI so an
+ * a reader will have access to all applications. Unsupported operations could not be removed from the UI so an
  * appropriate exception is thrown and displayed to users in the event they attempt to modify ACLs or perform other role
  * based assignments.
  */
@@ -372,6 +373,19 @@ public class DirectoryAuthorization implements Authorization {
      */
     @Override
     public Map setUserRole(UserRole userRole, UserInfo admin) {
+        /**
+         * When admin is null, it is most likely coming from the Experiment creation page. Allow
+         * this to proceed to avoid confusion, but this is a NOOP.
+         * @see com.intuit.wasabi.api.ExperimentsResource.putExperiment()
+         */
+        if(admin==null) {
+            Map<String, String> status = new HashMap<>();
+            status.put("applicationName", userRole.getApplicationName().toString());
+            status.put("userID", userRole.getUserID().toString());
+            status.put("role", userRole.getRole().toString());
+            status.put("roleAssignmentStatus", "SUCCESS");
+            return status;
+        }
         throw new UnsupportedOperationException(DIRECTORY_OPERATION_NOT_SUPPORTED);
     }
 

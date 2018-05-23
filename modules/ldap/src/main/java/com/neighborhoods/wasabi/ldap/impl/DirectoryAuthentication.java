@@ -43,7 +43,7 @@ public class DirectoryAuthentication implements Authentication {
     private static final String SPACE = " ";
 
     /** The Constant SEMICOLON. */
-    private static final String SEMICOLON = ":";
+    private static final String COLON = ":";
 
     /** The Constant BASIC. */
     public static final String BASIC = "Basic";
@@ -144,7 +144,7 @@ public class DirectoryAuthentication implements Authentication {
 
         // Core Wasabi doesn't allow : in both usernames and passwords. This will allow passwords to contain any number
         // of : but usernames will remain an issue
-        String[] fields = usernameAndPassword.split(SEMICOLON, 2);
+        String[] fields = usernameAndPassword.split(COLON, 2);
 
         if (fields.length < 2) {
             throw new AuthenticationException("Username or password are empty.");
